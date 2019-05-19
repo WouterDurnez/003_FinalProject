@@ -19,11 +19,12 @@ import os
 from xml.etree import ElementTree as ET
 
 import numpy as np
+from math import sqrt
 from skimage import io
 from skimage.transform import resize
 
-import scripts.itnodl_help as hlp
-from scripts.itnodl_help import LOG_LEVEL, time_it, log, make_folders
+import itnodl_help as hlp
+from itnodl_help import LOG_LEVEL, time_it, log, make_folders
 
 
 @time_it
@@ -159,6 +160,40 @@ def pipeline(image_dim=214,
     np.save(y_val_path, y_val)
 
     return (x_train, y_train), (x_val, y_val)
+
+
+def squash(x: np.ndarray) -> np.ndarray:
+    """
+    Flatten input matrix (n images of size image_dim x image_dim x 3).
+
+    :param x: input matrix (
+    :return: flattened input matrix
+    """
+
+    if len(x.shape) > 2:
+        image_dim = x.shape[1]
+        image_size = image_dim ** 2 * 3
+        return x.reshape((len(x), image_size))
+    else:
+        log("Failed to squash x - already flattened.", lvl=3)
+        return x
+
+
+def lift(x: np.ndarray) -> np.ndarray:
+    """
+    Expand input matrix (n image vectors of size image_dim x image_dim x 3).
+
+    :param x: input matrix
+    :return: expanded input matrix
+    """
+
+    if not len(x.shape) > 2:
+        image_size = x.shape[1]
+        image_dim = round(sqrt(image_size/3))
+        return x.reshape((len(x), image_dim, image_dim, 3))
+    else:
+        log("Failed to lift x - already expanded.", lvl=3)
+        return x
 
 
 if __name__ == '__main__':

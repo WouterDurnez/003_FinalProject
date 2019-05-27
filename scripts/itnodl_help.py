@@ -21,14 +21,14 @@ import time
 # GLOBAL VARIABLES #
 ####################
 
-# Set log level (1 = only top level log messages, 3 = all log messages)
+# Set log level (1 = only top level log messages -> 3 = all log messages)
 LOG_LEVEL = 1
 
 
 # FUNCTIONS #
 #############
 
-def log(*message, lvl=3, sep=""):
+def log(*message, lvl=3, sep="", title=False):
     """Print wrapper, adds timestamp."""
 
     # Set timezone
@@ -36,9 +36,23 @@ def log(*message, lvl=3, sep=""):
         os.environ['TZ'] = 'Europe/Amsterdam'
         time.tzset()
 
+    # Title always get shown
+    lvl = 1 if title else lvl
+
+    # Print if log level is sufficient
     if lvl <= LOG_LEVEL:
-        t = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        print(str(t), (" - " if sep == "" else "-"), *message, sep=sep)
+
+        # Print title
+        if title:
+            n = len(*message)
+            print('\n' + (n + 4) * '#')
+            print('# ', *message, ' #', sep='')
+            print((n + 4) * '#' + '\n')
+
+        # Print regular
+        else:
+            t = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+            print(str(t), (" - " if sep == "" else "-"), *message, sep=sep)
 
     return
 
@@ -68,15 +82,16 @@ def make_folders(*folders):
     for folder in folders:
         if not os.path.exists(os.path.join(os.pardir, folder)):
             os.makedirs(os.path.join(os.pardir, folder))
-            log("Created \'", folder, "\' folder.")
+            log("Created \'", folder, "\' folder.", lvl=3)
         else:
-            log("\'{}\' folder accounted for.".format(folder))
+            log("\'{}\' folder accounted for.".format(folder), lvl=3)
 
 
 # MAIN #
 ########
 
 if __name__ is "__main__":
+    log("Behold, peasants", title=True)
 
     log("Nothing to see here, move along.", lvl=1)
     log("No really, nothing.", lvl=2)

@@ -31,24 +31,85 @@ from keras.utils import plot_model
 from matplotlib import pyplot as plt
 
 
-def prep_input(x: np.ndarray, mean: np.ndarray) -> np.ndarray:
+def linear_auto_architecture(image_size: int, optimizer: str, loss: str, encoding_dim: int) -> Model():
     """
-    Standard preprocessing of input ndarray.
+    Build architecture for linear autoencoder with single layer.
 
-    :param x: array of indices (shape: n x image_size x image_size x 3)
-    :return: mean corrected x
+    :param image_size: data size (image dim x image dim x color channels)
+    :param optimizer: optimizer function
+    :param loss: loss function
+    :return:
     """
-    x_new = x[:, ] - mean
-    return x_new
+
+    # Model parameters
+    input_shape = (image_size,)
+
+    # Build model
+    autoencoder = Sequential()
+    autoencoder.add(Dense(encoding_dim, input_shape=input_shape, activation='linear',
+                          kernel_initializer='random_uniform', bias_initializer='zeros'))
+    autoencoder.add(Dense(image_size, activation='linear',
+                          kernel_initializer='random_uniform', bias_initializer='zeros'))
+
+    # Compile model
+    autoencoder.compile(optimizer=optimizer, loss=loss)
+
+    return autoencoder
 
 
-def linear_autoencoder(x_tr: np.ndarray, x_va: np.ndarray,
-                       model_name='linear_autoencoder',
-                       encoding_dim=32, epochs=100,
-                       optimizer="adam", loss="mean_squared_error") -> \
+def convolutional_auto_architecture(image_dim: int, optimizer: str, loss: str, encoding_dim: int) -> Model():
+    """
+    Build architecture for deep convolutional autoencoder.
+
+    :param image_dim: dimension of image (total size = image dim x image dim x color channels)
+    :param optimizer: optimizer function
+    :param loss: loss function
+    :return:
+    """
+
+    # Model parameters
+    input_shape = (image_dim, image_dim, 3)
+
+    # Build model
+    autoencoder = Sequential()
+    autoencoder.add(Conv2D(2 * encoding_dim, (3, 3), padding='same', activation='relu', input_shape=input_shape,
+                           kernel_initializer='random_uniform', bias_initializer='zeros'))
+    autoencoder.add(BatchNormalization())
+    autoencoder.add(MaxPooling2D((2, 2), padding='same'))
+
+    autoencoder.add(Conv2D(encoding_dim, (3, 3), padding='same', activation='relu',
+                           kernel_initializer='random_uniform', bias_initializer='zeros'))
+    autoencoder.add(BatchNormalization())
+    autoencoder.add(MaxPooling2D((2, 2), padding='same', name='encoder'))
+
+    autoencoder.add(Conv2D(encoding_dim, (3, 3), padding='same', activation='relu',
+                           kernel_initializer='random_uniform', bias_initializer='zeros'))
+    autoencoder.add(BatchNormalization())
+    autoencoder.add(UpSampling2D((2, 2)))
+
+    autoencoder.add(Conv2D(2 * encoding_dim, (3, 3), padding='same', activation='relu',
+                           kernel_initializer='random_uniform', bias_initializer='zeros'))
+    autoencoder.add(BatchNormalization())
+    autoencoder.add(UpSampling2D((2, 2)))
+
+    autoencoder.add(Conv2D(3, (10, 10), padding='same', activation='sigmoid',
+                           kernel_initializer='random_uniform', bias_initializer='zeros'))
+    autoencoder.add(BatchNormalization())
+
+    # Compile model
+    autoencoder.compile(optimizer=optimizer, loss=loss)
+
+    return autoencoder
+
+
+def build_autoencoder(model_name: str, convolutional: bool, train: bool,
+                      x_tr: np.ndarray, x_va: np.ndarray,
+                      encoding_dim=32, epochs=100,
+                      optimizer="adam", loss="mean_squared_error",
+                      patience=5) -> \
         (Sequential, Sequential, float):
     """
-    Build a linear autoencoder.
+    Build an autoencoder.
 
     :param model_name: name used in file creation
     :param x_tr: training images
@@ -57,23 +118,33 @@ def linear_autoencoder(x_tr: np.ndarray, x_va: np.ndarray,
     :param epochs: number of epochs to train for
     :param optimizer: optimizer to use in training
     :param loss: loss function to use in training
+    :param patience: number of epochs without improvement before early stop
     :return: autoencoder model, encoder model, decoder model, compression factor
     """
 
-    # Get image dimension
+    # Model parameters
     image_dim = x_tr.shape[1]
     image_size = image_dim ** 2 * 3
+    compression_factor = np.round(float(image_size / encoding_dim), decimals=2)
 
     # Set parameters
     batch_size = 32
+    if hlp.LOG_LEVEL == 3:
+        verbose = 1
+    elif hlp.LOG_LEVEL == 2:
+        verbose = 2
+    else:
+        verbose = 0
 
     # Full model name for file output
-    full_model_name = model_name + '_im_dim' + str(image_dim) + '-en_dim' + str(encoding_dim)
+    full_model_name = model_name + '_im_dim' + str(image_dim) + '-comp' + str(int(compression_factor))
 
     # Build model path
     model_path = os.path.join(os.pardir, "models", full_model_name + ".h5")
-    best_model_path = os.path.join(os.pardir, "models", full_model_name + "_best.h5")
-    plot_path = os.path.join(os.pardir, "models", full_model_name + ".png")
+    architecture_path = os.path.join(os.pardir, "models", "architecture", full_model_name + "_architecture.png")
+
+    # Keep track of history
+    history = []
     history_path = os.path.join(os.pardir, "models", "history", full_model_name + "_history.npy")
 
     # Try loading the model, ...
@@ -81,179 +152,74 @@ def linear_autoencoder(x_tr: np.ndarray, x_va: np.ndarray,
 
         autoencoder = load_model(model_path)
         log("Found model \'", model_name, "\' locally.", lvl=3)
-        history = np.load(file=history_path)
+        history = np.load(file=history_path).tolist()
         log("Found model \'", model_name, "\' history locally.", lvl=3)
 
     # ... otherwise, create it
     except:
 
-        log("Training linear autoencoder.", lvl=2)
+        if convolutional:
+            log("Training deep convolutional autoencoder.", lvl=2)
+            autoencoder = convolutional_auto_architecture(image_dim=image_dim, optimizer=optimizer, loss=loss,
+                                                          encoding_dim=encoding_dim)
+        else:
+            log("Training linear autoencoder.", lvl=2)
+            autoencoder = linear_auto_architecture(image_size=image_size, optimizer=optimizer, loss=loss,
+                                                   encoding_dim=encoding_dim)
 
-        # Flatten
-        x_tr = squash(x_tr)
-        x_va = squash(x_va)
-        input_shape = (image_size,)
+        # Print to log
+        log("-- image dimension: {}, image size: {}, compression factor {}".
+            format(image_dim, image_size, compression_factor), lvl=3)
 
-        # Build model
-        autoencoder = Sequential()
-        autoencoder.add(Dense(encoding_dim, input_shape=input_shape, activation='linear',
-                              kernel_initializer='random_uniform', bias_initializer='zeros'))
-        autoencoder.add(Dense(image_size, activation='linear',
-                              kernel_initializer='random_uniform', bias_initializer='zeros'))
+    # Train the model (either continue training the old model, or train the new one)
+    if train:
 
-        # Compile model
-        autoencoder.compile(optimizer=optimizer, loss=loss)
+        # Flatten image data for linear model
+        if not convolutional:
+            # Flatten
+            x_tr = squash(x_tr)
+            x_va = squash(x_va)
 
         # Training parameters
-        es = EarlyStopping(monitor='val_loss', patience=5, verbose=1)
-        mc = ModelCheckpoint(filepath=best_model_path, monitor='val_loss', verbose=1, save_best_only=True)
-        tb = TensorBoard(log_dir='/tmp/auto_lin')
+        es = EarlyStopping(monitor='val_loss', patience=patience, verbose=verbose)
+        mc = ModelCheckpoint(filepath=model_path, monitor='val_loss', verbose=verbose, save_best_only=True)
+        tb = TensorBoard(log_dir='/tmp/' + model_name + '_im' + str(image_dim) + 'comp' + str(int(compression_factor)))
 
         # Train model
-        history = autoencoder.fit(x_tr, x_tr,
-                        epochs=epochs,
-                        batch_size=batch_size,
-                        verbose=1,
-                        validation_data=(x_va, x_va),
-                        callbacks=[es, mc, tb])
+        history.append(
+            autoencoder.fit(x_tr, x_tr,
+                            epochs=epochs,
+                            batch_size=batch_size,
+                            verbose=verbose,
+                            validation_data=(x_va, x_va),
+                            callbacks=[es, mc, tb])
+        )
 
         # Save model and history
         autoencoder.save(model_path)
         np.save(file=history_path, arr=history)
 
-        # Visual aid
-        plot_model(autoencoder, to_file=plot_path, show_layer_names=True, show_shapes=True)
+    # Visual aid
+    plot_model(autoencoder, to_file=architecture_path, show_layer_names=True, show_shapes=True)
 
     # Get intermediate output at encoded layer
-    encoder = Model(inputs=autoencoder.input, outputs=autoencoder.get_layer(index=0).output)
+    if convolutional:
+        encoder = Model(inputs=autoencoder.input, outputs=autoencoder.get_layer(name='encoder').output)
+    else:
+        encoder = Model(inputs=autoencoder.input, outputs=autoencoder.get_layer(index=0).output)
 
     # See effect of encoded representations on output (eigenfaces?)
     '''decoder = Model(inputs=Input(shape=(encoding_dim,)), outputs=autoencoder.output)
     plot_model(autoencoder, to_file=os.path.join(os.pardir, "models", "decoder.png"), show_layer_names=True, show_shapes=True)'''
 
     # Size of encoded representation
-    compression_factor = np.round(float(image_size / encoding_dim), decimals=2)
-    log("Compression factor is {}".format(compression_factor), lvl=3)
-
-    return autoencoder, encoder, history
-
-
-def deep_cnn_autoencoder(x_tr: np.ndarray, x_va: np.ndarray,
-                         model_name='dcnn_autoencoder',
-                         encoding_dim=32, epochs=75,
-                         optimizer="adam", loss="mean_squared_error") -> \
-        (Sequential, Sequential, float):
-    """
-    Build a deep convolutional autoencoder.
-
-    :param model_name: name used in file creation
-    :param x_tr: training images
-    :param x_va: validation images
-    :param encoding_dim: number of nodes in encoder layer (i.e. the bottleneck)
-    :param epochs: number of epochs to train for
-    :param optimizer: optimizer to use in training
-    :param loss: loss function to use in training
-    :return: autoencoder model, encoder model, decoder model, compression factor
-    """
-
-    # Get image dimension
-    image_dim = x_tr.shape[1]
-    image_size = image_dim ** 2 * 3
-
-    # Set parameters
-    batch_size = 32
-
-    # Full model name for file output
-    full_model_name = model_name + '_im_dim' + str(image_dim) + '-en_dim' + str(encoding_dim)
-
-    # Build model path
-    model_path = os.path.join(os.pardir, "models", full_model_name + ".h5")
-    best_model_path = os.path.join(os.pardir, "models", full_model_name + "_best.h5")
-    plot_path = os.path.join(os.pardir, "models", full_model_name + ".png")
-    history_path = os.path.join(os.pardir, "models", "history", full_model_name + "_history.npy")
-
-    # Try loading the model, ...
-    try:
-
-        autoencoder = load_model(model_path)
-        log("Found model \'", model_name, "\' locally.", lvl=3)
-        history = np.load(file=history_path)
-        log("Found model \'", model_name, "\' history locally.", lvl=3)
-
-    # ... otherwise, create it
-    except:
-
-        log("Training deep convolutional autoencoder.", lvl=2)
-
-        # Input shape: image dim x image dim x 3
-        input_shape = x_tr.shape[1:]
-
-        # Build model
-        autoencoder = Sequential()
-        autoencoder.add(Conv2D(2 * encoding_dim, (10, 10), padding='same', activation='relu', input_shape=input_shape,
-                               kernel_initializer='random_uniform', bias_initializer='zeros'))
-        autoencoder.add(BatchNormalization())
-        autoencoder.add(MaxPooling2D((2, 2), padding='same'))
-
-        autoencoder.add(Conv2D(encoding_dim, (10, 10), padding='same', activation='relu',
-                               kernel_initializer='random_uniform', bias_initializer='zeros'))
-        autoencoder.add(BatchNormalization())
-        autoencoder.add(MaxPooling2D((2, 2), padding='same'))
-
-        autoencoder.add(Conv2D(encoding_dim, (10, 10), padding='same', activation='relu',
-                               kernel_initializer='random_uniform', bias_initializer='zeros'))
-        autoencoder.add(BatchNormalization())
-        autoencoder.add(UpSampling2D((2, 2)))
-
-        autoencoder.add(Conv2D(2 * encoding_dim, (10, 10), padding='same', activation='relu',
-                               kernel_initializer='random_uniform', bias_initializer='zeros'))
-        autoencoder.add(BatchNormalization())
-        autoencoder.add(UpSampling2D((2, 2)))
-
-        autoencoder.add(Conv2D(3, (10, 10), padding='same', activation='sigmoid',
-                               kernel_initializer='random_uniform', bias_initializer='zeros'))
-        autoencoder.add(BatchNormalization())
-
-        # Compile model
-        autoencoder.compile(optimizer=optimizer, loss=loss)
-
-        # Training parameters
-        es = EarlyStopping(monitor='val_loss', patience=5, verbose=1)
-        mc = ModelCheckpoint(filepath=best_model_path, monitor='val_loss', verbose=1, save_best_only=True)
-        tb = TensorBoard(log_dir='/tmp/auto_dcnn')
-
-        # Train model
-        history = autoencoder.fit(x_tr, x_tr,
-                        epochs=epochs,
-                        batch_size=batch_size,
-                        verbose=1,
-                        validation_data=(x_va, x_va),
-                        callbacks=[es, mc, tb])
-
-        # Save model and history
-        autoencoder.save(model_path)
-        np.save(file=history_path, arr=history)
-
-        # Visual aid
-        plot_model(autoencoder, to_file=plot_path, show_layer_names=True, show_shapes=True)
-
-    # Get intermediate output at encoded layer
-    # encoder = Model(inputs=autoencoder.input, outputs=autoencoder.get_layer(name='max_pooling2d_2').output)
-    encoder = None
-
-    # See effect of encoded representations on output (eigenfaces?)
-    '''decoder = Model(inputs=Input(shape=(encoding_dim,)), outputs=autoencoder.output)
-    plot_model(autoencoder, to_file=os.path.join(os.pardir, "models", "decoder.png"), show_layer_names=True, show_shapes=True)'''
-
-    # Size of encoded representation
-    compression_factor = np.round(float(image_size / encoding_dim), decimals=2)
-    log("Compression factor is {}".format(compression_factor), lvl=3)
+    log("Compression factor is {}, encoded vector length is {}".format(compression_factor, encoding_dim), lvl=3)
 
     return autoencoder, encoder, history
 
 
 def plot_encoder_results(autoencoder: Sequential, convolutional: bool, model_name: str,
-                         compression_factor: float, x: np.ndarray, examples=5, save=True):
+                         compression_factor: float, x: np.ndarray, examples=5, save=True, plot=True):
     """
     Plot a number of examples: compare original and reconstructed images.
 
@@ -297,7 +263,7 @@ def plot_encoder_results(autoencoder: Sequential, convolutional: bool, model_nam
         col = i % col_count
 
         original_image = x[col]
-        reconstructed_image = x_pred[col].reshape(image_dim, image_dim, 3)
+        reconstructed_image = x_pred[col].reshape(image_dim, image_dim, 3) if not convolutional else x_pred[col]
 
         ax = subplot_axes[row][col]
         if row == 0:
@@ -310,7 +276,7 @@ def plot_encoder_results(autoencoder: Sequential, convolutional: bool, model_nam
         ax.axis('off')
 
     # General make-up
-    sup_string = ('Deep CNN' if convolutional else 'Linear') +\
+    sup_string = ('Deep CNN' if convolutional else 'Linear') + \
                  ' autoencoder - image dim {}, compression factor {}'.format(image_dim, compression_factor)
     plt.suptitle(sup_string,
                  fontweight='bold', fontsize='12')
@@ -318,53 +284,87 @@ def plot_encoder_results(autoencoder: Sequential, convolutional: bool, model_nam
 
     # Save Figure
     # Full model name for file output
-    full_model_name = model_name + '_im_dim' + str(image_dim) + '-en_dim' + str(encoding_dim)
+    full_model_name = model_name + '_im_dim' + str(image_dim) + '-comp' + str(int(compression_factor))
 
     # Build model path
     model_path = os.path.join(os.pardir, "models", "plots", full_model_name + ".png")
+
+    # Show 'n tell
     if save: plt.savefig(model_path)
-    plt.show()
+    if plot: plt.show()
 
 
 if __name__ == "__main__":
     """Main function."""
 
+    # Let's go
+    log("AUTOENCODERS", title=True)
+
     # Set parameters
     hlp.LOG_LEVEL = 3
     tf.logging.set_verbosity(tf.logging.ERROR)
 
+    # Model approaches
+    linear = True
+    convolutional = True
+
     # Loop over these dimensions
-    image_dims = (32, 64, 128)
-    encoding_dims = (128, 256, 512)
+    '''image_dims = (32, 32, 32, 64, 64, 64,)
+    compression_factors = (4, 16, 32, 4, 16, 32,)'''
+    image_dims = (48, 48,)
+    compression_factors = (32, 16,)
 
-    for image_dim in image_dims:
+    for image_dim, compression_factor in zip(image_dims, compression_factors):
 
-        for encoding_dim in encoding_dims:
-            # Calculate extra parameters
-            image_size = image_dim ** 2 * 3
-            compression_factor = np.round(float(image_size / encoding_dim), decimals=2)
+        # Calculate extra parameters
+        image_size = image_dim ** 2 * 3
+        encoding_dim = image_size // compression_factor
 
-            # Check folders
-            make_folders('models',
-                         os.path.join('models', 'plots'),
-                         os.path.join('models', 'history'))
+        # Check folders
+        make_folders('models',
+                     os.path.join('models', 'plots'),
+                     os.path.join('models', 'history'),
+                     os.path.join('models', 'architecture'))
 
-            # Get the data
-            (x_tr, y_tr), (x_va, y_va) = dat.pipeline(image_dim=image_dim)
+        # Get the data
+        (x_tr, y_tr), (x_va, y_va) = dat.pipeline(image_dim=image_dim)
 
-            # Build linear autoencoder
-            lin_auto, lin_enc, lin_hist = linear_autoencoder(model_name='linear_autoencoder',
-                                                   x_tr=x_tr, x_va=x_va,
-                                                   encoding_dim=encoding_dim, epochs=80)
-            dcnn_auto, dcnn_enc, lin_hist = deep_cnn_autoencoder(x_tr=x_tr, x_va=x_va,
-                                                       model_name='dcnn_autoencoder',
-                                                       encoding_dim=encoding_dim,
-                                                       epochs=75)
+        # Build linear autoencoder
+        if linear:
+            # Log
+            log("Linear autoencoder for {id}x{id} images, compression {c}".format(id=image_dim,
+                                                                                  c=compression_factor), title=True)
+            # Build
+            lin_auto, lin_enc, lin_hist = build_autoencoder(model_name='lin_auto',
+                                                            convolutional=False,
+                                                            train=False,
+                                                            x_tr=x_tr, x_va=x_va,
+                                                            encoding_dim=encoding_dim,
+                                                            epochs=150,
+                                                            patience=15)
 
-            # Check results
-            plot_encoder_results(model_name='linear_autoencoder', autoencoder=lin_auto, convolutional=False,
+            # Visualize
+            plot_encoder_results(model_name='lin_auto', autoencoder=lin_auto, convolutional=False,
                                  compression_factor=compression_factor,
-                                 x=x_va)
-            plot_encoder_results(model_name='dcnn_autoencoder', autoencoder=dcnn_auto, convolutional=True,
+                                 x=x_va, save=True, plot=False)
+
+        # Build deep convolutional auto encoder
+        if convolutional:
+            # Log
+            log("Deep convolutional autoencoder for {id}x{id} images, compression {c}".format(id=image_dim,
+                                                                                              c=compression_factor),
+                title=True)
+
+            # Build
+            dcnn_auto, dcnn_enc, dcnn_hist = build_autoencoder(model_name='conv_auto',
+                                                               convolutional=True,
+                                                               train=True,
+                                                               x_tr=x_tr, x_va=x_va,
+                                                               encoding_dim=encoding_dim,
+                                                               epochs=75,
+                                                               patience=10)
+
+            # Train
+            plot_encoder_results(model_name='conv_auto', autoencoder=dcnn_auto, convolutional=True,
                                  compression_factor=compression_factor,
-                                 x=x_va)
+                                 x=x_va, save=True, plot=False)

@@ -16,15 +16,14 @@ Coded by Wouter Durnez
 """
 
 import os
+from math import sqrt
 from xml.etree import ElementTree as ET
 
+import itnodl_help as hlp
 import numpy as np
-from math import sqrt
+from itnodl_help import time_it, log, make_folders
 from skimage import io
 from skimage.transform import resize
-
-import itnodl_help as hlp
-from itnodl_help import LOG_LEVEL, time_it, log, make_folders
 
 
 @time_it
@@ -87,10 +86,9 @@ def pipeline(image_dim=214,
     :return:
     """
 
-    log("Set up data.", lvl=1)
+    log("Preparing data.", lvl=1)
 
     # Make folders, should they not exist yet
-    log("Validating project structure.", lvl=3)
     make_folders("data", "scripts")
 
     # Try to load data sets locally
@@ -147,10 +145,10 @@ def pipeline(image_dim=214,
 
     x_train, y_train = build_classification_dataset(list_of_files=train_files, image_dim=image_dim, filter=filter,
                                                     voc_root_folder=voc_root_folder)
-    log("{} training images from {} classes".format(x_train.shape[0], y_train.shape[1]), lvl=3)
+    log("Extracted {} training images from {} classes.".format(x_train.shape[0], y_train.shape[1]), lvl=3)
     x_val, y_val = build_classification_dataset(list_of_files=val_files, image_dim=image_dim, filter=filter,
                                                 voc_root_folder=voc_root_folder)
-    log("{} validation images from {} classes".format(x_val.shape[0], y_train.shape[1]), lvl=3)
+    log("Extracted {} validation images from {} classes.".format(x_val.shape[0], y_train.shape[1]), lvl=3)
 
     # Save locally, because this takes a while
     log("Storing data.", lvl=3)

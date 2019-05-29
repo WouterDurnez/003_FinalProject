@@ -18,18 +18,23 @@ Coded by Wouter Durnez
 import os
 from math import ceil
 
-import itnodl_data as dat
-import itnodl_help as hlp
 import numpy as np
 import tensorflow as tf
-from itnodl_data import squash, lift
-from itnodl_help import log, make_folders
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
 from keras.layers import Dense, Conv2D, BatchNormalization, MaxPooling2D, UpSampling2D
 from keras.models import Sequential, Model, load_model
 from keras.utils import plot_model
 from matplotlib import pyplot as plt
 
+import itnodl_data as dat
+import itnodl_help as hlp
+from itnodl_data import squash, lift
+from itnodl_help import log, make_folders
+
+
+#################
+# Architectures #
+#################
 
 def linear_auto_architecture(image_size: int, optimizer: str, loss: str, encoding_dim: int) -> Model():
     """
@@ -72,7 +77,7 @@ def convolutional_auto_architecture(image_dim: int, optimizer: str, loss: str, e
 
     # Build model
     autoencoder = Sequential()
-    autoencoder.add(Conv2D(2 * encoding_dim, (3, 3), padding='same', activation='relu', input_shape=input_shape,
+    autoencoder.add(Conv2D(2 * encoding_dim, (5, 5), padding='same', activation='relu', input_shape=input_shape,
                            kernel_initializer='random_uniform', bias_initializer='zeros'))
     autoencoder.add(BatchNormalization())
     autoencoder.add(MaxPooling2D((2, 2), padding='same'))
@@ -87,7 +92,7 @@ def convolutional_auto_architecture(image_dim: int, optimizer: str, loss: str, e
     autoencoder.add(BatchNormalization())
     autoencoder.add(UpSampling2D((2, 2)))
 
-    autoencoder.add(Conv2D(2 * encoding_dim, (3, 3), padding='same', activation='relu',
+    autoencoder.add(Conv2D(2 * encoding_dim, (5, 5), padding='same', activation='relu',
                            kernel_initializer='random_uniform', bias_initializer='zeros'))
     autoencoder.add(BatchNormalization())
     autoencoder.add(UpSampling2D((2, 2)))
@@ -101,6 +106,10 @@ def convolutional_auto_architecture(image_dim: int, optimizer: str, loss: str, e
 
     return autoencoder
 
+
+###################
+# Build and train #
+###################
 
 def build_autoencoder(model_name: str, convolutional: bool, train: bool,
                       x_tr: np.ndarray, x_va: np.ndarray,
@@ -218,6 +227,10 @@ def build_autoencoder(model_name: str, convolutional: bool, train: bool,
     return autoencoder, encoder, history
 
 
+#############
+# Visualize #
+#############
+
 def plot_encoder_results(autoencoder: Sequential, convolutional: bool, model_name: str,
                          compression_factor: float, x: np.ndarray, examples=5, save=True, plot=True):
     """
@@ -294,6 +307,10 @@ def plot_encoder_results(autoencoder: Sequential, convolutional: bool, model_nam
     if plot: plt.show()
 
 
+########
+# MAIN #
+########
+
 if __name__ == "__main__":
     """Main function."""
 
@@ -305,16 +322,16 @@ if __name__ == "__main__":
     tf.logging.set_verbosity(tf.logging.ERROR)
 
     # Model approaches
-    linear = True
+    linear = False
     convolutional = True
 
     # Loop over these dimensions
-    '''image_dims = (32, 32, 32, 64, 64, 64,)
-    compression_factors = (4, 16, 32, 4, 16, 32,)'''
-    image_dims = (48, 48,)
-    compression_factors = (32, 16,)
+    image_dims = (48,)
+    compression_factors = (32,)
 
-    for image_dim, compression_factor in zip(image_dims, compression_factors):
+    dims = [(i, c) for i in image_dims for c in compression_factors]
+
+    for image_dim, compression_factor in dims:
 
         # Calculate extra parameters
         image_size = image_dim ** 2 * 3
@@ -337,7 +354,7 @@ if __name__ == "__main__":
             # Build
             lin_auto, lin_enc, lin_hist = build_autoencoder(model_name='lin_auto',
                                                             convolutional=False,
-                                                            train=False,
+                                                            train=True,
                                                             x_tr=x_tr, x_va=x_va,
                                                             encoding_dim=encoding_dim,
                                                             epochs=150,
@@ -361,7 +378,7 @@ if __name__ == "__main__":
                                                                train=True,
                                                                x_tr=x_tr, x_va=x_va,
                                                                encoding_dim=encoding_dim,
-                                                               epochs=75,
+                                                               epochs=100,
                                                                patience=10)
 
             # Train

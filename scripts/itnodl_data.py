@@ -19,12 +19,17 @@ import os
 from math import sqrt
 from xml.etree import ElementTree as ET
 
-import itnodl_help as hlp
 import numpy as np
-from itnodl_help import time_it, log, make_folders
 from skimage import io
 from skimage.transform import resize
 
+import itnodl_help as hlp
+from itnodl_help import time_it, log, make_folders
+
+
+#################
+# Build dataset #
+#################
 
 @time_it
 def build_classification_dataset(list_of_files: list, image_dim: int, filter: list, voc_root_folder: str):
@@ -159,6 +164,10 @@ def pipeline(image_dim=214,
 
     return (x_train, y_train), (x_val, y_val)
 
+
+##################
+# Reshape images #
+##################
 
 def squash(x: np.ndarray) -> np.ndarray:
     """

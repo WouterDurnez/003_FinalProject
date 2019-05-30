@@ -20,18 +20,99 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
-from keras.layers import Dense, Flatten, Activation, Dropout
+from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping, History
+from keras.layers import Dense, Flatten, Activation, Dropout, Conv2D, MaxPooling2D, BatchNormalization
 from keras.models import Sequential
-from keras.utils import plot_model
+from keras.preprocessing.image import ImageDataGenerator
 
 import itnodl_help as hlp
 from itnodl_auto import build_autoencoder
 from itnodl_data import pipeline
-from itnodl_help import log
+from itnodl_help import log, set_up_model_directory
+
+
+def build_classifier(image_dim: int, compression_factor: int,
+                     x_tr: np.ndarray, y_tr: np.ndarray, x_va: np.ndarray, y_va: np.ndarray,
+                     all_trainable=False, epochs=200, patience=25) -> (Sequential, History):
+    # Build encoder
+    _, encoder, _ = build_autoencoder(model_name='conv_auto',
+                                      convolutional=True,
+                                      train=False,
+                                      x_tr=x_tr, x_va=x_va,
+                                      compression_factor=compression_factor)
+    image_size = image_dim ** 2 * 3
+    encoding_dim = image_size // compression_factor
+
+    # Freeze, dirtbag (or not, I'm not dirty Harry)
+    conv_layers = [1, 2, 4, 5]
+    for i in conv_layers:
+        encoder.get_layer(index=i).trainable = all_trainable
+
+    # Extending into classifier
+
+    input_shape = (image_dim, image_dim, 3)
+
+    classifier = Sequential()
+
+    # classifier.add(encoder)
+    classifier.add(Conv2D(2 * encoding_dim, (3, 3), padding='same', activation='relu', input_shape=input_shape,
+                          kernel_initializer='random_uniform', bias_initializer='zeros'))
+    classifier.add(BatchNormalization())
+    classifier.add(MaxPooling2D((2, 2), padding='same'))
+
+    classifier.add(Conv2D(encoding_dim, (3, 3), padding='same', activation='relu',
+                          kernel_initializer='random_uniform', bias_initializer='zeros'))
+    classifier.add(BatchNormalization())
+    classifier.add(MaxPooling2D((2, 2), padding='same', name='encoder'))
+
+    classifier.add(Flatten())
+    classifier.add(Dense(encoding_dim))
+    classifier.add(Activation('relu'))
+    classifier.add(Dropout(0.5))
+    classifier.add(Dense(5, activation='sigmoid'))  # <-- multilabel (for multiclass: softmax)
+    classifier.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+    # Data augmentation
+    datagen = ImageDataGenerator(
+        rotation_range=15,
+        width_shift_range=0.1,
+        height_shift_range=0.1,
+        horizontal_flip=True,
+    )
+    datagen.fit(x_tr)
+
+    # Training parameters
+    verbose = 2
+
+    # Callbacks
+    if patience == 0:
+        patience = epochs
+    es = EarlyStopping(monitor='val_loss', patience=patience, verbose=verbose)
+    mc = ModelCheckpoint(filepath=classifier_path, monitor='val_loss', verbose=verbose, save_best_only=True)
+    tb = TensorBoard(log_dir='/tmp/' + classifier_name + '_im' + str(image_dim) + 'comp' + str(int(compression_factor)))
+
+    # Train model
+    history = classifier.fit_generator(datagen.flow(x_tr, y_tr, batch_size=32),
+                                       epochs=epochs,
+                                       steps_per_epoch=x_tr.shape[0] // 32,
+                                       verbose=verbose,
+                                       validation_data=(x_va, y_va),
+                                       callbacks=[es, mc, tb])
+    '''history = classifier.fit(x=x_tr, y=y_tr,
+                             batch_size=32,
+                             epochs=epochs,
+                             verbose=verbose,
+                             callbacks=[es, mc, tb],
+                             validation_data=(x_va, y_va))'''
+
+    # Save model and history
+    classifier.save(classifier_path)
+    np.save(file=history_path, arr=history)
+
+    return classifier, history
+
 
 if __name__ == "__main__":
-
     # TODO: add data generator
 
     # Let's go
@@ -41,8 +122,11 @@ if __name__ == "__main__":
     hlp.LOG_LEVEL = 3
     tf.logging.set_verbosity(tf.logging.ERROR)
 
+    # Check folders
+    set_up_model_directory('classifiers')
+
     # Set model parameters
-    model_name = 'conv_auto'
+    autoencoder_name = 'conv_auto'
     classifier_name = 'conv_class'
     image_dim = 32
     image_size = image_dim ** 2 * 3
@@ -50,78 +134,20 @@ if __name__ == "__main__":
     encoding_dim = image_size // compression_factor
 
     # Full model name for file output
-    full_model_name = model_name + '_im_dim' + str(image_dim) + '-comp' + str(int(compression_factor))
-    full_classifier_name = classifier_name + '_im_dim' + str(image_dim) + '-comp' + str(int(compression_factor))
+    full_autoencoder_name = "{}_im_dim{}-comp{}".format(autoencoder_name, image_dim, compression_factor)
+    full_classifier_name = "{}_im_dim{}-comp{}".format(classifier_name, image_dim, compression_factor)
 
     # Build paths
-    model_path = os.path.join(os.pardir, "models", full_model_name + ".h5")
-    classifier_path = os.path.join(os.pardir, "models", full_classifier_name + ".h5")
-    history_path = os.path.join(os.pardir, "models", "history", full_classifier_name + "_history.npy")
+    autoencoder_path = os.path.join(os.pardir, "models", "autoencoders", full_autoencoder_name + ".h5")
+    classifier_path = os.path.join(os.pardir, "models", "classifiers", full_classifier_name + ".h5")
+    history_path = os.path.join(os.pardir, "models", "classifiers", "history", full_classifier_name + "_history.npy")
 
     # Get the data
     (x_tr, y_tr), (x_va, y_va) = pipeline(image_dim=image_dim)
 
-    # Build encoder
-    _, encoder, _ = build_autoencoder(model_name='conv_auto',
-                                      convolutional=True,
-                                      train=False,
-                                      x_tr=x_tr, x_va=x_va,
-                                      encoding_dim=encoding_dim)
-
-    # Freeze, dirtbag
-    train_all = True
-    conv_layers = [1, 2, 4, 5]
-    for i in conv_layers:
-        encoder.get_layer(index=i).trainable = train_all
-
-    # Extending into classifier
-    classifier = Sequential()
-    classifier.add(encoder)
-    classifier.add(Flatten())
-    classifier.add(Activation('relu'))
-    classifier.add(Dropout(0.5))
-    classifier.add(Dense(5, activation='softmax'))
-    classifier.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-
-    encoder.summary()
-    classifier.summary()
-
-    plot_model(classifier)
-    # Train the network
-    # Training parameters
-    patience = 15
-    verbose = 2
-
-    es = EarlyStopping(monitor='val_loss', patience=patience, verbose=verbose)
-    mc = ModelCheckpoint(filepath=classifier_path, monitor='val_loss', verbose=verbose, save_best_only=True)
-    tb = TensorBoard(log_dir='/tmp/' + classifier_name + '_im' + str(image_dim) + 'comp' + str(int(compression_factor)))
-
-    # Train model
-    history = classifier.fit(x_tr, y_tr,
-                             epochs=200,
-                             batch_size=32,
-                             verbose=verbose,
-                             validation_data=(x_va, y_va),
-                             callbacks=[es, mc, tb])
-
-    # Save model and history
-    classifier.save(classifier_path)
-    np.save(file=history_path, arr=history)
-
-    y_va_pre = classifier.predict(x=x_va)
-    y_tr_pre = classifier.predict(x=y_tr)
-    # encoder = Model(inputs=autoencoder.input, outputs=autoencoder.get_layer(name='encoder').output)
-
-    count_true = 0
-    for i in range(len(y_tr)):
-        equal = np.array_equal(y_tr[i], np.round(y_tr_pre[i]).astype('int'))
-        print("{} - {} -> {}".format(y_tr[i],
-                                     np.round(y_tr_pre[i], 3),
-                                     equal)
-              )
-        if equal:
-            count_true += 1
-    print("Accuracy: ", count_true * 100 / len(y_tr))
+    # Build classifier
+    classifier, history = build_classifier(image_dim=image_dim, compression_factor=compression_factor,
+                                           x_tr=x_tr, y_tr=y_tr, x_va=x_va, y_va=y_va, all_trainable=True, patience=20)
 
     # Plot training & validation accuracy values
     plt.plot(history.history['acc'])

@@ -75,6 +75,7 @@ def time_it(f):
 def make_folders(*folders):
     """
     If folders don't exist, make them.
+
     :param folders:
     :return: None
     """
@@ -85,6 +86,21 @@ def make_folders(*folders):
             log("Created \'", folder, "\' folder.", lvl=3)
         else:
             log("\'{}\' folder accounted for.".format(folder), lvl=3)
+
+
+def set_up_model_directory(model_type: str):
+    """
+    Set up folder structure for a certain type of models, including folders for plots, architecture, and history.
+
+    :param model_type: goal of neural net (e.g. classifiers).
+    :return: None
+    """
+
+    make_folders('models',
+                 os.path.join('models', model_type),
+                 os.path.join('models', model_type, 'plots'),
+                 os.path.join('models', model_type, 'history'),
+                 os.path.join('models', model_type, 'architecture'))
 
 
 # MAIN #

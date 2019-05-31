@@ -330,10 +330,11 @@ if __name__ == "__main__":
     convolutional, convolutional_train = True, True
 
     # Loop over these dimensions
-    image_dims = ()
-    compression_factors = (16, 32, 48,)
+    image_dims = (16, 32, 48,)
+    compression_factors = (96,)
 
     dims = [(i, c) for i in image_dims for c in compression_factors]
+    dims.append((64,48))
 
     for image_dim, compression_factor in dims:
 

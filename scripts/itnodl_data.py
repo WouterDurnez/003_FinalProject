@@ -8,7 +8,7 @@
 #                        |_|                               |___/
 
 """
-DATA OPERATIONS
+TASK 1 - *Arnold voice* WE AVE TOE GET TO THE DATAA
 
 Coded by Wouter Durnez
 -- Wouter.Durnez@UGent.be

@@ -15,17 +15,16 @@ Coded by Wouter Durnez
 -- Wouter.Durnez@student.kuleuven.be
 """
 
-import os
-import numpy as np
-
-import itnodl_help as hlp
-from itnodl_help import log, set_up_model_directory, make_folders
-from itnodl_data import pipeline
 import tensorflow as tf
 
+import itnodl_help as hlp
+from itnodl_data import pipeline
+from itnodl_help import log, set_up_model_directory
+
 if __name__ == "__main__":
+
     # Let's go
-    log("CLASSIFIERS", title=True)
+    log("SEGMENTATION", title=True)
 
     # Set logging parameters
     hlp.LOG_LEVEL = 3

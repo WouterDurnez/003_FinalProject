@@ -123,7 +123,7 @@ def build_autoencoder(model_name: str, convolutional: bool, train: bool,
     :param model_name: name used in file creation
     :param x_tr: training images
     :param x_va: validation images
-    :param encoding_dim: number of nodes in encoder layer (i.e. the bottleneck)
+    :param compression_factor: what's the size of the bottleneck?
     :param epochs: number of epochs to train for
     :param optimizer: optimizer to use in training
     :param loss: loss function to use in training
@@ -330,11 +330,10 @@ if __name__ == "__main__":
     convolutional, convolutional_train = True, True
 
     # Loop over these dimensions
-    image_dims = (16, 32, 48,)
-    compression_factors = (96,)
+    image_dims = (64,)
+    compression_factors = (64,)
 
     dims = [(i, c) for i in image_dims for c in compression_factors]
-    dims.append((64,48))
 
     for image_dim, compression_factor in dims:
 
@@ -381,5 +380,5 @@ if __name__ == "__main__":
 
             # Train
             plot_autoencoder_results(model_name='conv_auto', autoencoder=dcnn_auto, convolutional=True,
-                                 compression_factor=compression_factor,
-                                 x=x_va, save=True, plot=False)
+                                     compression_factor=compression_factor,
+                                     x=x_va, save=True, plot=True, examples=6)

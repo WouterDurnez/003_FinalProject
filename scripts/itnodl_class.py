@@ -16,23 +16,28 @@ Coded by Wouter Durnez
 """
 
 import os
+from pprint import PrettyPrinter
 
 import matplotlib.pyplot as plt
-import seaborn as sns
 import numpy as np
+import pandas as pd
+import seaborn as sns
 import tensorflow as tf
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping, History
 from keras.layers import Dense, Flatten, Activation, Dropout, Conv2D, BatchNormalization, MaxPooling2D
-from keras.models import Sequential, Model
+from keras.models import Sequential, Model, load_model
 from keras.preprocessing.image import ImageDataGenerator
-from sklearn.metrics import precision_recall_curve, hamming_loss, accuracy_score
-from pprint import PrettyPrinter
+from sklearn.metrics import hamming_loss, accuracy_score, f1_score
 
 import itnodl_help as hlp
 from itnodl_auto import build_autoencoder
 from itnodl_data import pipeline
 from itnodl_help import log, set_up_model_directory
 
+
+###################
+# Build and train #
+###################
 
 def build_classifier(image_dim: int, compression_factor: int,
                      x_tr: np.ndarray, y_tr: np.ndarray, x_va: np.ndarray, y_va: np.ndarray,
@@ -123,10 +128,11 @@ def build_classifier(image_dim: int, compression_factor: int,
         patience = epochs
     es = EarlyStopping(monitor='val_loss', patience=patience, verbose=verbose)
     mc = ModelCheckpoint(filepath=classifier_path, monitor='val_loss', verbose=verbose, save_best_only=True)
-    tb = TensorBoard(log_dir='/tmp/{}_im{}comp{}_full{}'.format(classifier_name,
-                                                                image_dim,
-                                                                compression_factor,
-                                                                all_trainable))
+    tb = TensorBoard(log_dir='/tmp/{}_im{}comp{}_full{}_scratch{}'.format(classifier_name,
+                                                                          image_dim,
+                                                                          compression_factor,
+                                                                          all_trainable,
+                                                                          from_scratch))
 
     # Train model using data augmentation
     history = classifier.fit_generator(datagen.flow(x_tr, y_tr, batch_size=32),
@@ -148,34 +154,130 @@ def build_classifier(image_dim: int, compression_factor: int,
     return classifier, history
 
 
-def plot_model_metrics(histories: dict) -> plt.Axes:
+############
+# Evaluate #
+############
+
+def hamming_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    '''
+    Compute the Hamming score (a.k.a. label-based accuracy) for the multi-label case.
+    '''
+
+    # Store accuracy of each prediction
+    accuracies = []
+
+    for i in range(len(y_true)):
+
+        set_true = set(np.where(y_true[i])[0])  # Positions of true labels
+        set_pred = set(np.where(y_pred[i])[0])  # Positions of labels predicted to be true
+
+        if len(set_true) == 0 and len(set_pred) == 0:
+            accuracy_temp = 1
+        else:
+            accuracy_temp = len(set_true.intersection(set_pred)) / float(len(set_true.union(set_pred)))
+
+        accuracies.append(accuracy_temp)
+
+    return float(np.mean(accuracies))
+
+
+def label_based_accuracy(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    accuracies = []
+    for i in range(len(y_true)):
+        accuracy = np.sum(y_true[i] == y_pred[i]) / len(y_true[i])
+        accuracies.append(accuracy)
+
+    return float(np.mean(accuracies))
+
+
+def evaluate_classifier(classifier: Model, x: np.ndarray, y: np.ndarray, threshold=.5) -> dict:
     """
-    Plot the history of the model metrics.
+    Evaluate classifier on number of metrics.
+
+    :param classifier: the model that is to be evaluated.
+    :param x: training (input) data which will lead to predictions
+    :param y: expected outcomes
+    :param threshold: boundary for prediction value to be considered 0 or 1
+    :return:
+    """
+
+    log("Evaluating classifier.", lvl=2)
+
+    # Store metrics in dictionary
+    metrics = {}
+
+    # Get probabilities
+    y_prob = classifier.predict(x)
+
+    # ... and extract for predictions
+    y_pred = y_prob
+    super_threshold_indices = y_prob > threshold
+    y_pred[super_threshold_indices] = 1
+    y_pred[np.invert(super_threshold_indices)] = 0
+
+    pp = PrettyPrinter(indent=4)
+
+    metrics['Hamming loss'] = hamming_loss(y, y_pred)
+    metrics['Exact match ratio'] = accuracy_score(y, y_pred)
+    metrics['Hamming score'] = hamming_score(y, y_pred)
+    # metrics['Precision score (micro)'] = precision_score(y, y_pred, average='micro')
+    # metrics['Precision score (macro)'] = precision_score(y, y_pred, average='macro')
+    metrics['F1 score (micro)'] = f1_score(y, y_pred, average='micro')
+    metrics['Label-based accuracy'] = label_based_accuracy(y, y_pred)
+    # metrics['F1 score (macro)'] = f1_score(y, y_pred, average='macro')
+
+    """In a multi-class classification setup, micro-average is preferable if you suspect
+     there might be class imbalance (i.e you may have many more examples of one class
+      than of other classes) -> We know this is not the case."""
+
+    # pp.pprint(metrics)
+
+    return metrics
+
+
+#############
+# Visualize #
+#############
+
+def plot_model_histories(histories: dict, image_dim: int, compression_factor: int, save=True, plot=True) -> plt.Axes:
+    """
+    Plot the histories of the model metrics 'loss' and 'accuracy'.
 
     :param histories: histories of trained models
+    :param image_dim: image dimension
+    :param compression_factor: (sic)
+    :param save: save plot to png
+    :param plot: show plot
     :return: plot axes
     """
 
+    log("Plotting model metrics.", lvl=2)
+
     # Set style
     sns.set_style('whitegrid')
+    colors = sns.color_palette('pastel', n_colors=3)
 
     # Initialize axes
     fig, subplot_axes = plt.subplots(2, 2,
                                      squeeze=False,
                                      sharex='none',
                                      sharey='none',
-                                     figsize=(10, 10))
+                                     figsize=(11, 10),
+                                     constrained_layout=True)
 
     # Fill axes
     for col in range(2):
 
-        train_or_val = 'Train' if col == 0 else 'Validation'
+        train_or_val = 'Training' if col == 0 else 'Validation'
 
         for row in range(2):
 
             ax = subplot_axes[row][col]
 
+            color_counter = 0
             for label, history in histories.items():
+
+                n_epochs = len(history.history['loss'])
 
                 if row == 0:
                     key = 'acc' if col == 0 else 'val_acc'
@@ -190,42 +292,66 @@ def plot_model_metrics(histories: dict) -> plt.Axes:
                     y_limit = (.2, .7)
 
                 # Plot training & validation accuracy values
+                ax.plot(history.history[key], label="Model: {}".format(label), color=colors[color_counter])
 
-                ax.plot(history.history[key], label="Model: {}".format(label))
+                # Add vertical line to indicate early stopping
+                ax.axvline(x=n_epochs, linestyle='--', color=colors[color_counter])
 
-                ax.set_title(title, fontdict={'fontweight': 'bold'})
+                # Set a title, the correct y-label, and the y-limit
+                ax.set_title(title, fontdict={'fontweight': 'semibold'})
                 ax.set_ylabel(y_label)
                 ax.set_ylim(y_limit)
-            ax.set_xlabel('Epoch')
-            ax.set_xlim(0, 100)
-            ax.legend(loc='auto')
 
-    plt.show()
+                color_counter += 1
+
+            if row == 1: ax.set_xlabel('Epoch')
+            ax.set_xlim(0, 200)
+            ax.legend(loc='best')
+
+    # Title
+    plt.suptitle(
+        "Training histories of classifier models (image dim {} - compression {})".format(image_dim, compression_factor),
+        fontweight='bold')
+
+    # Build model path
+    evaluation_label = 'histories_im_dim{}comp{}'.format(image_dim, compression_factor)
+    model_path = os.path.join(os.pardir, "models", "classifiers", "plots", evaluation_label + ".png")
+
+    # Show 'n tell
+    if save: fig.savefig(model_path, dpi=fig.dpi)
+    if plot: plt.show()
 
     return ax
 
 
-def evaluate_classifier(classifier: Model, x: np.ndarray, y: np.ndarray, threshold=.5) -> dict:
-    # Store metrics in dictionary
-    metrics = {}
+def plot_model_metrics(evaluations: dict, image_dim: int, compression_factor: int, save=True, plot=True) -> plt.Axes:
+    # Pour evaluations into data frame
+    evaluations_df = pd.DataFrame(evaluations).reset_index().rename(index=str, columns={'index': 'metric'})
+    evaluations_long = pd.melt(evaluations_df, id_vars='metric', var_name='approach', value_name='value')
 
-    # Get probabilities
-    y_prob = classifier.predict(x)
+    # Nested barplot to show evaluation metrics
+    sns.set_style('white')
+    ax = sns.catplot(x="metric", y="value", data=evaluations_long, kind='bar', legend=None,
+                     hue="approach", palette="pastel", height=8, aspect=1.6)
+    ax.despine(bottom=True, offset=10, trim=True)
+    ax.set_xlabels("Metric", fontdict={'fontweight': 'bold'})
+    ax.set_ylabels("")
+    plt.legend(loc='best')
 
-    # ... and extract for predictions
-    y_pred = y_prob
-    super_threshold_indices = y_prob > threshold
-    y_pred[super_threshold_indices] = 1
-    y_pred[np.invert(super_threshold_indices)] = 0
+    # Title
+    plt.suptitle(
+        "Evaluation of classifier models (image dim {} - compression {})".format(image_dim, compression_factor),
+        fontweight='bold')
 
-    pp = PrettyPrinter(indent=5)
+    # Build model path
+    evaluation_label = 'evaluation_metrics_im_dim{}comp{}'.format(image_dim, compression_factor)
+    model_path = os.path.join(os.pardir, "models", "classifiers", "plots", evaluation_label + ".png")
 
-    metrics['Hamming loss'] = hamming_loss(y, y_pred)
-    metrics['Exact match ratio'] = accuracy_score(y, y_pred)
+    # Show 'n tell
+    if save: plt.savefig(model_path, dpi=150)
+    if plot: plt.show()
 
-    pp.pprint(metrics)
-
-    return metrics
+    return ax
 
 
 if __name__ == "__main__":
@@ -234,7 +360,7 @@ if __name__ == "__main__":
     log("CLASSIFIERS", title=True)
 
     # Set logging parameters
-    hlp.LOG_LEVEL = 3
+    hlp.LOG_LEVEL = 2
     tf.logging.set_verbosity(tf.logging.ERROR)
 
     # Check folders
@@ -243,24 +369,34 @@ if __name__ == "__main__":
     # Set model parameters
     autoencoder_name = 'conv_auto'
     classifier_name = 'conv_class'
-    image_dim = 32
+    image_dim = 48
     image_size = image_dim ** 2 * 3
-    compression_factor = 32
+    compression_factor = 48
     encoding_dim = image_size // compression_factor
+
+    # Train or just load?
+    train = False
 
     # Get the data
     (x_tr, y_tr), (x_va, y_va) = pipeline(image_dim=image_dim)
 
-    # Store histories
-    histories = {}
+    # Store classifiers and their histories
+    classifiers, histories, evaluations = {}, {}, {}
 
     # Model parameters to loop over
     parameter_combinations = [(False, False),
                               (False, True),
                               (True, True)]
 
-    # Compare classifiers
-    for (from_scratch, all_trainable) in parameter_combinations:
+    # Build classifiers
+    for index, (from_scratch, all_trainable) in enumerate(parameter_combinations):
+
+        # Detail the step we're taking
+        approach = "{}from scratch, {}all layers trainable".format(("" if from_scratch else "not "),
+                                                                   ("" if all_trainable else "not "))
+        log("Classifier {}".format(index + 1), title=True)
+        log("Approach: {}.".format(approach), lvl=1)
+
         # Full model name for file output
         full_autoencoder_name = "{}_im_dim{}-comp{}".format(autoencoder_name, image_dim, compression_factor)
         full_classifier_name = "{}_im_dim{}-comp{}_full{}_scratch{}".format(classifier_name, image_dim,
@@ -268,57 +404,41 @@ if __name__ == "__main__":
                                                                             all_trainable, from_scratch)
 
         # Build paths
+        log("Building paths.", lvl=3)
         autoencoder_path = os.path.join(os.pardir, "models", "autoencoders", full_autoencoder_name + ".h5")
         classifier_path = os.path.join(os.pardir, "models", "classifiers", full_classifier_name + ".h5")
         history_path = os.path.join(os.pardir, "models", "classifiers", "history",
                                     full_classifier_name + "_history.npy")
 
-        history_label = "{}from scratch, {}all trainable".format(("" if from_scratch else "not "),
-                                                                 ("" if all_trainable else "not "))
+        # Load classifier and history if they exists...
+        try:
+            classifiers[full_classifier_name] = load_model(filepath=classifier_path)
+            log("Found model \'", full_classifier_name, "\' locally.", lvl=3)
+            histories[approach] = np.load(file=history_path).item()
+            log("Found model \'", full_classifier_name, "\' history locally.", lvl=3)
 
-        # Build classifier
-        classifier, histories[history_label] = build_classifier(image_dim=image_dim,
-                                                                compression_factor=compression_factor,
-                                                                x_tr=x_tr, y_tr=y_tr, x_va=x_va, y_va=y_va,
-                                                                from_scratch=from_scratch, all_trainable=all_trainable,
-                                                                epochs=100, patience=0)
+        # ... build it if it doesn't
+        except:
+            log("Failed to find model \'{}\' - building.".format(full_classifier_name), lvl=2)
+            classifiers[full_classifier_name], histories[approach] = build_classifier(image_dim=image_dim,
+                                                                                      compression_factor=compression_factor,
+                                                                                      x_tr=x_tr, y_tr=y_tr, x_va=x_va,
+                                                                                      y_va=y_va,
+                                                                                      from_scratch=from_scratch,
+                                                                                      all_trainable=all_trainable,
+                                                                                      epochs=200, patience=20)
 
-        # Save history
-        np.save(file=history_path, arr=histories[history_label])
+            # Save history
+            log("Saving history.", lvl=3)
+            np.save(file=history_path, arr=histories[approach])
+
+        # Evaluate classifier
+        evaluations[approach] = evaluate_classifier(classifiers[full_classifier_name], x=x_va, y=y_va, threshold=.5)
+
+    # Plot model histories
+    plot_model_histories(histories=histories, save=True, plot=True, image_dim=image_dim,
+                         compression_factor=compression_factor)
 
     # Plot model metrics
-    plot_model_metrics(histories=histories)
-
-    '''Further evaluation'''
-
-    # TODO: need better metrics here. Accuracy, exact match ration, precision, recall, Hamming loss?
-
-    # Compare classifiers
-    y_va_pre = classifier.predict(x_va)
-    y_tr_pre = classifier.predict(x_tr)
-
-    for threshold in np.arange(.1, .9, .05):
-        print(threshold)
-        evaluate_classifier(classifier, x=x_va, y=y_va, threshold=threshold)
-
-    correct = 0
-    for i in range(len(y_va)):
-
-        equal = np.equal(y_va[i], np.round(y_va_pre[i], 0))
-        all = equal.all()
-
-        if all:
-            correct += 1
-
-        print("{} -> {} -- {} ({})".format(y_va[i], np.round(y_va_pre[i], 0), equal, all))
-
-    correct2 = 0
-    for i in range(len(y_va)):
-
-        equal = np.equal(y_va[i], np.round(y_va_pre[i], 0))
-        all = equal.all()
-
-        if all:
-            correct2 += 1
-
-        print("{} -> {} -- {} ({})".format(y_va[i], np.round(y_va_pre[i], 0), equal, all))
+    plot_model_metrics(evaluations=evaluations, save=True, plot=True, image_dim=image_dim,
+                       compression_factor=compression_factor)

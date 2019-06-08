@@ -103,6 +103,7 @@ def set_up_model_directory(model_type: str):
                  os.path.join('models', model_type, 'architecture'))
 
 
+########
 # MAIN #
 ########
 

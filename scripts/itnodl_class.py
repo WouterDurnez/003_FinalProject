@@ -16,6 +16,8 @@ Coded by Wouter Durnez
 """
 
 import os
+import random as rnd
+from math import ceil
 from pprint import PrettyPrinter
 
 import matplotlib.pyplot as plt
@@ -27,11 +29,12 @@ from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping, History
 from keras.layers import Dense, Flatten, Activation, Dropout, Conv2D, BatchNormalization, MaxPooling2D
 from keras.models import Sequential, Model, load_model
 from keras.preprocessing.image import ImageDataGenerator
+from keras.utils import plot_model
 from sklearn.metrics import hamming_loss, accuracy_score, f1_score
 
+import itnodl_data as dat
 import itnodl_help as hlp
 from itnodl_auto import build_autoencoder
-from itnodl_data import pipeline
 from itnodl_help import log, set_up_model_directory
 
 
@@ -41,7 +44,8 @@ from itnodl_help import log, set_up_model_directory
 
 def build_classifier(image_dim: int, compression_factor: int,
                      x_tr: np.ndarray, y_tr: np.ndarray, x_va: np.ndarray, y_va: np.ndarray,
-                     from_scratch=False, all_trainable=False, epochs=200, patience=25) -> (Sequential, History):
+                     from_scratch=False, all_trainable=False,
+                     loss='binary_crossentropy', epochs=200, patience=25) -> (Sequential, History):
     """
     Build a deep convolutional classifier network, either from scratch, or from a pretrained autoencoder.
 
@@ -112,7 +116,15 @@ def build_classifier(image_dim: int, compression_factor: int,
     classifier.add(Activation('relu'))
     classifier.add(Dropout(0.5))
     classifier.add(Dense(5, activation='sigmoid'))  # <-- multilabel (for multiclass: softmax)
-    classifier.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    classifier.compile(optimizer='adam', loss=loss, metrics=['accuracy'])
+
+    # Plot model
+    full_classifier_name = "{}_im_dim{}-comp{}_full{}_scratch{}_loss{}".format(classifier_name, image_dim,
+                                                                               compression_factor,
+                                                                               all_trainable, from_scratch,
+                                                                               loss)
+    architecture_path = os.path.join(os.pardir, "models", "classifiers", "architecture", full_classifier_name + ".png")
+    plot_model(classifier, to_file=architecture_path, show_layer_names=True, show_shapes=True)
 
     # Data augmentation to get the most out of our images
     datagen = ImageDataGenerator(
@@ -128,11 +140,14 @@ def build_classifier(image_dim: int, compression_factor: int,
         patience = epochs
     es = EarlyStopping(monitor='val_loss', patience=patience, verbose=verbose)
     mc = ModelCheckpoint(filepath=classifier_path, monitor='val_loss', verbose=verbose, save_best_only=True)
-    tb = TensorBoard(log_dir='/tmp/{}_im{}comp{}_full{}_scratch{}'.format(classifier_name,
-                                                                          image_dim,
-                                                                          compression_factor,
-                                                                          all_trainable,
-                                                                          from_scratch))
+    tb = TensorBoard(log_dir='/tmp/{}_class_im{}comp{}_full{}_scratch{}'.format(classifier_name,
+                                                                                image_dim,
+                                                                                compression_factor,
+                                                                                all_trainable,
+                                                                                from_scratch))
+    # Print model info
+    log("Network parameters: image dimension {}, image size {}, compression factor {}.".
+        format(image_dim, image_size, compression_factor), lvl=3)
 
     # Train model using data augmentation
     history = classifier.fit_generator(datagen.flow(x_tr, y_tr, batch_size=32),
@@ -315,16 +330,26 @@ def plot_model_histories(histories: dict, image_dim: int, compression_factor: in
 
     # Build model path
     evaluation_label = 'histories_im_dim{}comp{}'.format(image_dim, compression_factor)
-    model_path = os.path.join(os.pardir, "models", "classifiers", "plots", evaluation_label + ".png")
+    plot_path = os.path.join(os.pardir, "models", "classifiers", "plots", evaluation_label + ".png")
 
     # Show 'n tell
-    if save: fig.savefig(model_path, dpi=fig.dpi)
+    if save: fig.savefig(plot_path, dpi=fig.dpi)
     if plot: plt.show()
 
     return ax
 
 
 def plot_model_metrics(evaluations: dict, image_dim: int, compression_factor: int, save=True, plot=True) -> plt.Axes:
+    """
+    Visualize comparison of approaches in terms of chosen metrics.
+
+    :param evaluations: dict containing metrics per approach
+    :param image_dim: image dimension
+    :param compression_factor: (sic)
+    :param save: should we save to disk?
+    :param plot: show plot?
+    :return: plot axes
+    """
     # Pour evaluations into data frame
     evaluations_df = pd.DataFrame(evaluations).reset_index().rename(index=str, columns={'index': 'metric'})
     evaluations_long = pd.melt(evaluations_df, id_vars='metric', var_name='approach', value_name='value')
@@ -354,31 +379,144 @@ def plot_model_metrics(evaluations: dict, image_dim: int, compression_factor: in
     return ax
 
 
+def plot_classifier_predictions(classifier: Sequential, approach: str, model_name: str, compression_factor: float,
+                                x: np.ndarray, y_true: np.ndarray,
+                                examples=5, random=True, save=True, plot=True):
+    """
+    Show some images, their true class labels, and the predicted class labels, for a given classifier.
+
+    :param classifier: model used to predict labels
+    :param model_name:
+    :param compression_factor:
+    :param x: images
+    :param y_true: true labels
+    :param examples: number of images to show
+    :param random: random selection of training images, or sequential (i.e. first #examples)
+    :param save: save to disk?
+    :param plot: show plot?
+    :return: SubplotAxes
+    """
+
+    log("Plotting model history")
+
+    # Set indices
+    indices = rnd.sample(range(len(x)), examples) if random else [i for i in range(examples)]
+
+    # Take subsets
+    x_sample = x[indices]
+    y_true_sample = y_true[indices]
+
+    # Make predictions
+    y_pred_sample = classifier.predict(x=x_sample)
+
+    # Get image dimension
+    image_dim = x.shape[1]
+
+    # Plot parameters
+    plot_count = examples * 2
+    row_count = 2
+    col_count = int(ceil(plot_count / row_count))
+
+    # Initialize axes
+    fig, subplot_axes = plt.subplots(row_count,
+                                     col_count,
+                                     squeeze=True,
+                                     sharey='row',
+                                     figsize=(18, 9),
+                                     constrained_layout=True)
+
+    # Set colors
+    colors = sns.color_palette('pastel', n_colors=len(dat.CLASSES))
+
+    # Fill axes
+    for i in range(plot_count):
+
+        row = i // col_count
+        col = i % col_count
+
+        original_image = x_sample[col]
+
+        ax = subplot_axes[row][col]
+
+        # First row: show original images
+        if row == 0:
+            labels = [label for got_label, label in zip(y_true_sample[col], dat.CLASSES) if got_label == 1]
+            ax.set_title("Image label: {}".format(labels))
+            ax.imshow(original_image)
+            ax.axis('off')
+
+        # Second row: show predictions
+        else:
+            ax.set_title("Predictions")
+            # sns.barplot(y=y_pred_sample[col], hue=colors)
+            ax.bar(x=range(len(dat.CLASSES)), height=y_pred_sample[col], color=colors)
+            ax.axhline(y=.5, linestyle='--', color='black')
+            ax.set_xticks(ticks=range(len(dat.CLASSES)))
+            ax.set_xticklabels(dat.CLASSES)
+            ax.set_ylim(0, 1)
+            # ax.set_aspect(2)
+            for tick in ax.get_xticklabels():
+                tick.set_rotation(45)
+
+        for i in range(len(x_sample)):
+            subplot_axes[1][i].set_ylim(0, 1.0)
+
+    # General make-up
+    plt.tight_layout()
+
+    # Full model name for file output
+    full_model_name = "predictions_" + model_name + '_im_dim' + str(image_dim) + '-comp' + str(int(compression_factor))
+
+    # Build model path
+    model_path = os.path.join(os.pardir, "models", "classifiers", "plots", full_model_name + ".png")
+
+    # Title
+    plt.suptitle(
+        "Predictions for <{}> approach (image dim {} - compression {})".format(approach, image_dim, compression_factor),
+        fontweight='bold')
+
+    # Show 'n tell
+    if save: plt.savefig(model_path, dpi=150)
+    if plot: plt.show()
+
+    return fig, subplot_axes
+
+
+########
+# MAIN #
+########
+
 if __name__ == "__main__":
 
     # Let's go
     log("CLASSIFIERS", title=True)
 
     # Set logging parameters
-    hlp.LOG_LEVEL = 2
+    hlp.LOG_LEVEL = 3
     tf.logging.set_verbosity(tf.logging.ERROR)
 
     # Check folders
     set_up_model_directory('classifiers')
 
-    # Set model parameters
+    # Dashboard
+    image_dim = 48
+    compression_factor = 48
+    loss = 'binary_crossentropy'
+
+    # Set remaining parameters
     autoencoder_name = 'conv_auto'
     classifier_name = 'conv_class'
-    image_dim = 48
     image_size = image_dim ** 2 * 3
-    compression_factor = 48
     encoding_dim = image_size // compression_factor
 
     # Train or just load?
-    train = False
+    train = True
 
     # Get the data
-    (x_tr, y_tr), (x_va, y_va) = pipeline(image_dim=image_dim)
+    data, _ = dat.pipeline(image_dim=image_dim)
+    x_tr, y_tr = data['x_train'], data['y_train']
+    x_va, y_va = data['x_val'], data['y_val']
+    x_te, y_te = data['x_test'], data['y_test']
 
     # Store classifiers and their histories
     classifiers, histories, evaluations = {}, {}, {}
@@ -399,9 +537,10 @@ if __name__ == "__main__":
 
         # Full model name for file output
         full_autoencoder_name = "{}_im_dim{}-comp{}".format(autoencoder_name, image_dim, compression_factor)
-        full_classifier_name = "{}_im_dim{}-comp{}_full{}_scratch{}".format(classifier_name, image_dim,
-                                                                            compression_factor,
-                                                                            all_trainable, from_scratch)
+        full_classifier_name = "{}_im_dim{}-comp{}_full{}_scratch{}_loss{}".format(classifier_name, image_dim,
+                                                                                   compression_factor,
+                                                                                   all_trainable, from_scratch,
+                                                                                   loss)
 
         # Build paths
         log("Building paths.", lvl=3)
@@ -424,9 +563,10 @@ if __name__ == "__main__":
                                                                                       compression_factor=compression_factor,
                                                                                       x_tr=x_tr, y_tr=y_tr, x_va=x_va,
                                                                                       y_va=y_va,
+                                                                                      loss=loss,
                                                                                       from_scratch=from_scratch,
                                                                                       all_trainable=all_trainable,
-                                                                                      epochs=200, patience=20)
+                                                                                      epochs=1, patience=0)
 
             # Save history
             log("Saving history.", lvl=3)
@@ -435,10 +575,17 @@ if __name__ == "__main__":
         # Evaluate classifier
         evaluations[approach] = evaluate_classifier(classifiers[full_classifier_name], x=x_va, y=y_va, threshold=.5)
 
+        # Show some predictions
+        plot_classifier_predictions(classifier=classifiers[full_classifier_name], approach=approach,
+                                    model_name=full_classifier_name,
+                                    compression_factor=compression_factor,
+                                    x=x_va, y_true=y_va, examples=5, random=True,
+                                    save=True, plot=False)
+
     # Plot model histories
-    plot_model_histories(histories=histories, save=True, plot=True, image_dim=image_dim,
+    plot_model_histories(histories=histories, save=True, plot=False, image_dim=image_dim,
                          compression_factor=compression_factor)
 
     # Plot model metrics
-    plot_model_metrics(evaluations=evaluations, save=True, plot=True, image_dim=image_dim,
+    plot_model_metrics(evaluations=evaluations, save=True, plot=False, image_dim=image_dim,
                        compression_factor=compression_factor)

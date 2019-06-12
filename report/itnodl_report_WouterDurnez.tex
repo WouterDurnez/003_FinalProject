@@ -1,0 +1,103 @@
+%  ___        _   _
+% |_ _|_ _   | |_| |_  ___   _ _  __ _ _ __  ___
+%  | || ' \  |  _| ' \/ -_) | ' \/ _` | '  \/ -_)
+% |___|_||_|  \__|_||_\___| |_||_\__,_|_|_|_\___|    _
+%  ___ / _|  __| |___ ___ _ __  | |___ __ _ _ _ _ _ (_)_ _  __ _
+% / _ \  _| / _` / -_) -_) '_ \ | / -_) _` | '_| ' \| | ' \/ _` |
+% \___/_|   \__,_\___\___| .__/ |_\___\__,_|_| |_||_|_|_||_\__, |
+%                        |_|                               |___/
+
+
+\documentclass[11pt, a4paper]{article}
+
+%%%%%%%%%%%%
+% Packages %
+%%%%%%%%%%%%
+
+\usepackage[english]{babel}
+\usepackage[hidelinks]{hyperref}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{mathtools}
+\usepackage{graphicx}
+\usepackage{dirtree}
+\usepackage{siunitx}
+
+\DeclarePairedDelimiterX{\norm}[1]{\lVert}{\rVert}{#1}
+
+%\usepackage[scaled]{helvet}
+%\renewcommand\familydefault{\sfdefault} 
+%\usepackage[T1]{fontenc}
+
+\usepackage{fourier} % math & rm
+\usepackage[scaled=0.875]{helvet} % ss
+\renewcommand{\ttdefault}{lmtt} %tt
+
+%%%%%%%%%%%%%%%%%
+% MAIN DOCUMENT %
+%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\selectlanguage{english}
+
+%%%%%%%%%%%%%%
+% Title page %
+%%%%%%%%%%%%%%
+
+\title{
+	\LARGE \textbf{In the Name of Deep Learning} \\
+	\vspace{5mm}
+	\large Final project report for Computer Vision 18-19
+}
+
+\author{Wouter Durnez}
+\date{\today}
+
+\maketitle
+\tableofcontents
+\pagenumbering{gobble}
+\newpage
+\pagenumbering{arabic}
+
+
+%%%%%%%%%%%%%%%%
+% Introduction %
+%%%%%%%%%%%%%%%%
+
+\input{itnodl_introduction}
+
+%%%%%%%%%%%%%%%%
+% Autoencoders %
+%%%%%%%%%%%%%%%%
+
+\input{itnodl_autoencoders}
+
+
+%%%%%%%%%%%%%%%%%%
+% Classification %
+%%%%%%%%%%%%%%%%%%
+
+\input{itnodl_classification}
+
+
+
+
+%%%%%%%%%%%%%%%%
+% Segmentation %
+%%%%%%%%%%%%%%%%
+
+\input{itnodl_segmentation}
+
+
+\section{Discussion}
+
+
+
+\end{document}
+
+
+
+

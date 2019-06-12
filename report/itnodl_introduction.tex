@@ -1,0 +1,104 @@
+
+\section{Introduction}
+\label{sec:intro}
+
+This report is submitted as part of the examination for the course \textit{Computer Vision}. It describes various types of 'home-made' neural networks, and how their respective network types can be used in the computer vision domain. In line with the spirit of the domain, and under the adage \textit{'a picture says more than a thousand words'}, the report is accompanied by a substantial number of visualizations and graphs. The scientific literature, on the other hand, is absent from the report, as the focus of the assignment was not the theoretical or mathematical foundations of neural networks. The structure of the report follows the structure of the original assignment. 
+
+\vspace{5mm} %5mm vertical space
+
+The project code can be found here: \textcolor{blue}{\url{https://github.com/WouterDurnez/003_FinalProject}}. It is structured as follows:
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{4cm}
+\dirtree{%
+	.1 data.
+		.2 VOCdevkit.
+		.2 image\_dim\_xx.
+	.1 models.
+		.2 autoencoders.
+			.3 architecture.
+			.3 plots.
+			.3 history.
+		.2 classifiers.
+			.3 architecture.
+			.3 plots.
+			.3 history.
+		.2 segmentation.
+			.3 architecture.
+			.3 plots.
+			.3 history.
+	.1 report.
+		.2 images.
+	.1 scripts.
+		.2 {\_\_init\_\_.py}.
+		.2 {itnodl\_help.py}.
+		.2 {itnodl\_data.py}.
+		.2 {itnodl\_auto.py}.
+		.2 {itnodl\_class.py}.
+		.2 {itnodl\_segm.py}.
+		.2 {itnodl\_tsne.py}.	
+}
+\end{minipage}
+\end{center}
+\end{figure}
+
+The code expects the \textit{data}, \textit{models} and \textit{scripts} folders to be present. Furthermore, the scripts should be downloaded in the corresponding folder, as well as the VOCdevkit data. All other folders, models and data are generated automatically when executing the code. Datasets for image dimension \textit{xx} (e.g. 32) are stored in corresponding folders.
+
+\paragraph{Datasets} The datasets used in this project were extracted from the PASCAL VOC 2009 Challenge. To minimize the training load, a subset of the full dataset was taken for each task. Filtering was achieved using the following class list: ['aeroplane', 'car', 'chair', 'dog', 'bird']. Only images that were labeled as belonging to one (or more) of the filter classes were withheld. The datasets are described in Table \ref{tab:datasets} and \ref{tab:classcounts}.
+
+\vspace{5mm} %5mm vertical space
+
+The organisation of the dataset in training and validation images was respected. Since it is possible to impart a bias onto a model by having its training process guided too strongly by a validation set, it was import to retain a set of 'fresh' images to use in a final check of each model's quality metrics. Therefore, half of the original 'validation images' were randomly sampled to be test images (denoted in table \ref{tab:datasets} as $val^\ast$), whereas the remaining images in the validation set were kept as validation data (denoted in the table by $val$). The latter category of images was used to monitor model metrics during training. Test images, on the other hand, were never seen or used during model training. Importantly, a seed was set for the random sampling to always yield the same results.
+ 
+\vspace{5mm} %5mm vertical space
+
+The dataset for the final task---\textbf{segmentation}---is slightly different from the others. Again, the same five classes were used to filter the full dataset to a smaller one. This time, however, only those images that were accompanied by a segmented counterpart could be used. This significantly reduced the number of available images in each of the (sub)sets. I attempted to remedy this problem in part by using data augmentation.
+
+
+\begingroup
+\begin{table}[!htbp]
+	
+	\renewcommand{\arraystretch}{1.5}
+	\centering
+	
+	\begin{tabular}{@{}ccccc@{}}
+		\toprule
+		\multicolumn{2}{c}{Section}                            	& \textbf{Autoencoders} 	& \textbf{Classification} 	& \textbf{Segmentation} 	\\ 
+		\midrule
+		\multirow{2}{*}{\textit{\textbf{Training}}}   & Files & $train$    & $train$    & $train$    \\
+		                                              & N     & 1489       & 1489       & 286        \\ 
+		\midrule
+		\multirow{2}{*}{\textit{\textbf{Validation}}} & Files & $val^\ast$ & $val^\ast$ & $val^\ast$ \\
+		                                              & N     & 735        & 735        & 67         \\ 
+		\midrule
+		\multirow{2}{*}{\textit{\textbf{Test}}}       & Files & $val$      & $val$      & $val$      \\
+		                                              & N     & 735        & 735        & 67         \\ 
+		\bottomrule
+	\end{tabular}
+	\caption{Dataset definition per section. Selected from main data corpus using class filter ['aeroplane', 'car', 'chair', 'dog', 'bird'].}
+		\label{tab:datasets}
+\end{table}
+\endgroup
+
+\begingroup
+\begin{table}[!htbp]
+	\renewcommand{\arraystretch}{1.5}
+	\centering
+
+	\begin{tabular}{@{}cccccc@{}}
+	\toprule
+	          Class & \textbf{Aeroplane} & \textbf{Bird} & \textbf{Car} & \textbf{Chair} & \textbf{Dog} \\ \midrule
+	\textit{\textbf{Training}}   & 210       & 257  & 381 & 347   & 294 \\
+	\textit{\textbf{Validation}} & 118       & 128  & 171 & 150   & 168 \\
+	\textit{\textbf{Test}}       & 120       & 129  & 195 & 149   & 152 \\ \bottomrule
+	\end{tabular}
+	\caption{Number of images per class, for each of the classification datasets.}
+	\label{tab:classcounts}
+
+\end{table}
+\endgroup
+
+\paragraph{Image dimensions and compression factors} Most of the neural networks (and their architectures) described in this report are largely derived from the deep convolutional autoencoder (DCA), outlined in section \textcolor{blue}{\ref{sec:auto}}. I varied multiple parameters to observe the impact on the result, its accuracy, and the speed with which it was obtained. To save time, I heavily downsampled the original images to feed to the neural nets (down to $16 \times 16 \times 3$ pixels). Once the algorithms worked, I experimented with higher resolution images (up to $128 \times 128 \times 3$ pixels). However, for the sake of consistency, \emph{all models discussed in this report take input images with dimensionality $96 \times 96 \times 3$, except when explicitly mentioned otherwise}.
+
+\paragraph{Platform} All models were created using Keras, a deep learning library developed for the Python programming language. For model training, I restricted myself to the loss functions and optimizers that are implemented in this package.

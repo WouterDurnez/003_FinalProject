@@ -20,6 +20,7 @@ import random as rnd
 from math import ceil
 
 import numpy as np
+import pylab
 import seaborn as sns
 import tensorflow as tf
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
@@ -30,6 +31,7 @@ from matplotlib import pyplot as plt
 
 import itnodl_data as dat
 import itnodl_help as hlp
+import itnodl_tsne as tsne
 from itnodl_data import squash, lift, show_some
 from itnodl_help import log, set_up_model_directory
 
@@ -86,12 +88,12 @@ def convolutional_auto_architecture(image_dim: int, optimizer: str, loss: str, c
     autoencoder.add(BatchNormalization())
     autoencoder.add(MaxPooling2D((2, 2), padding='same'))
 
-    autoencoder.add(Conv2D(image_dim // compression_factor, (3, 3), padding='same', activation='relu',
+    autoencoder.add(Conv2D(image_dim // (2 * compression_factor), (3, 3), padding='same', activation='relu',
                            kernel_initializer='random_uniform', bias_initializer='zeros'))
     autoencoder.add(BatchNormalization())
     autoencoder.add(MaxPooling2D((2, 2), padding='same', name='encoder'))
 
-    autoencoder.add(Conv2D(image_dim // compression_factor, (3, 3), padding='same', activation='relu',
+    autoencoder.add(Conv2D(image_dim // (2 * compression_factor), (3, 3), padding='same', activation='relu',
                            kernel_initializer='random_uniform', bias_initializer='zeros'))
     autoencoder.add(BatchNormalization())
     autoencoder.add(UpSampling2D((2, 2)))
@@ -138,9 +140,10 @@ def build_autoencoder(model_name: str, convolutional: bool, train: bool,
     # Model parameters
     image_dim = x_tr.shape[1]
     image_size = image_dim ** 2 * 3
+    encoding_dim = image_size // compression_factor
 
     # Set parameters
-    batch_size = 32
+    batch_size = 128
     if hlp.LOG_LEVEL == 3:
         verbose = 1
     elif hlp.LOG_LEVEL == 2:
@@ -181,8 +184,8 @@ def build_autoencoder(model_name: str, convolutional: bool, train: bool,
                                                    compression_factor=compression_factor)
 
         # Print model info
-        log("Network parameters: image dimension {}, image size {}, compression factor {}.".
-            format(image_dim, image_size, compression_factor), lvl=3)
+        log("Network parameters: image dimension {}, image size {}, encoding dimension {}, compression factor {}.".
+            format(image_dim, image_size, encoding_dim, compression_factor), lvl=3)
 
     # Train the model (either continue training the old model, or train the new one)
     if train:
@@ -199,6 +202,15 @@ def build_autoencoder(model_name: str, convolutional: bool, train: bool,
         mc = ModelCheckpoint(filepath=model_path, monitor='val_loss', verbose=verbose, save_best_only=True)
         tb = TensorBoard(log_dir='/tmp/' + model_name + '_im' + str(image_dim) + 'comp' + str(int(compression_factor)))
 
+        # Data augmentation to get the most out of our images
+        '''datagen = ImageDataGenerator(
+            rotation_range=15,
+            width_shift_range=0.1,
+            height_shift_range=0.1,
+            horizontal_flip=True,
+        )
+        datagen.fit(x_tr)'''
+
         # Train model
         history.append(
             autoencoder.fit(x_tr, x_tr,
@@ -208,6 +220,7 @@ def build_autoencoder(model_name: str, convolutional: bool, train: bool,
                             validation_data=(x_va, x_va),
                             callbacks=[es, mc, tb])
         )
+
 
         # Save model and history
         # autoencoder.save(autoencoder_path) # <- already stored at checkpoint
@@ -383,7 +396,8 @@ def plot_both_autoencoder_results(image_list: list, examples=5, random=True, sav
     if plot: plt.show()
 
 
-def plot_model_histories(histories: dict, image_dim: int, compression_factor: int, save=True, plot=True) -> plt.Axes:
+def plot_model_histories(histories: dict, image_dim: int, compression_factor: int, model_type="autoencoders", save=True,
+                         plot=True) -> plt.Axes:
     """
     Plot the histories of the model metrics 'loss' and 'val loss'.
 
@@ -410,7 +424,7 @@ def plot_model_histories(histories: dict, image_dim: int, compression_factor: in
     fig, subplot_axes = plt.subplots(1, 2,
                                      squeeze=False,
                                      sharex='none',
-                                     sharey='none',
+                                     sharey='row',
                                      figsize=(10, 4),
                                      constrained_layout=True)
 
@@ -428,24 +442,24 @@ def plot_model_histories(histories: dict, image_dim: int, compression_factor: in
             key = 'loss' if col == 0 else 'val_loss'
             title = '{} loss'.format(train_or_val)
             y_label = 'Loss (mean squared error)' if col == 0 else ''
-            y_limit = (0, .7)
+            y_limit = (0, .1)
 
             # Plot training & validation accuracy values
-            ax.plot(history.history[key], label="Model: {}".format(label), color=colors[color_counter])
+            ax.plot(history.history[key], label=label, color=colors[color_counter])
 
             # Add vertical line to indicate early stopping
-            ax.axvline(x=n_epochs, linestyle='--', color=colors[color_counter])
+            ax.axvline(x=n_epochs - 1, linestyle='--', color=colors[color_counter])
 
             # Set a title, the correct y-label, and the y-limit
             ax.set_title(title, fontdict=font)
             ax.set_ylabel(y_label, fontdict={'fontname': 'Times New Roman'})
-            ax.set_ylim(y_limit)
+            # ax.set_ylim(y_limit)
             ax.set_yscale("log")
 
             color_counter += 1
 
             ax.set_xlabel('Epoch', fontdict={'fontname': 'Times New Roman'})
-            ax.set_xlim(0, 100)
+            ax.set_xlim(0, n_epochs)
 
             ax.legend(loc='best', prop={'family': 'Serif'})
 
@@ -456,7 +470,7 @@ def plot_model_histories(histories: dict, image_dim: int, compression_factor: in
 
     # Build model path
     evaluation_label = 'histories_im_dim{}comp{}'.format(image_dim, compression_factor)
-    plot_path = os.path.join(os.pardir, "models", "autoencoders", "plots", evaluation_label + ".png")
+    plot_path = os.path.join(os.pardir, "models", model_type, "plots", evaluation_label + ".png")
 
     # Show 'n tell
     if save: fig.savefig(plot_path, dpi=fig.dpi)
@@ -488,18 +502,17 @@ if __name__ == "__main__":
 
     # Loop over these dimensions
     '''image_dims = (48,)
-    compression_factors = (48,)'''
+    compression_factors = (48,)
+    dims = [(i, c) for i in image_dims for c in compression_factors]'''
 
-    # dims = [(i, c) for i in image_dims for c in compression_factors]
-
-    image_dim, compression_factor = 64, 24
+    image_dim, compression_factor = 96, 24
+    loss = 'mean_squared_error'
 
     # Calculate extra parameters
     image_size = image_dim ** 2 * 3
     encoding_dim = image_size // compression_factor
-
-    print("image size:", image_size,
-          "encoding dim", encoding_dim)
+    epochs = 200
+    patience = 20
 
     # Get the data
     data, _ = dat.pipeline(image_dim=image_dim)
@@ -518,8 +531,9 @@ if __name__ == "__main__":
                                                         train=linear_train,
                                                         x_tr=x_tr, x_va=x_va,
                                                         compression_factor=compression_factor,
-                                                        epochs=100,
-                                                        patience=10)
+                                                        epochs=epochs,
+                                                        patience=patience,
+                                                        loss=loss)
 
         # Visualize
         plot_autoencoder_results(model_name='lin_auto', autoencoder=lin_auto, convolutional=False,
@@ -543,8 +557,9 @@ if __name__ == "__main__":
                                                            train=convolutional_train,
                                                            x_tr=x_tr, x_va=x_va,
                                                            compression_factor=compression_factor,
-                                                           epochs=100,
-                                                           patience=10)
+                                                           epochs=epochs,
+                                                           patience=patience,
+                                                           loss=loss)
 
         # Train
         plot_autoencoder_results(model_name='conv_auto', autoencoder=dcnn_auto, convolutional=True,
@@ -569,7 +584,7 @@ if __name__ == "__main__":
     x_te_pred_lin = lift(lin_auto.predict(x=squash(x_te)))
 
     plot_both_autoencoder_results(image_list=[x_te, x_te_pred_lin, x_te_pred_cnn],
-                                  examples=5,
+                                  examples=5, random=True,
                                   save=True, plot=True)
 
     show_some(image_list=[x_te, x_te_pred_lin, x_te_pred_cnn],
@@ -578,15 +593,20 @@ if __name__ == "__main__":
               n=5, random=True, save=True, save_name="auto_comparison")
 
     # Evalution
-    lin_eval = lin_auto.evaluate(squash(x_te), squash(x_te))
-    dcnn_eval = dcnn_auto.evaluate(x_te, x_te)
+    lin_eval, dcnn_eval = [], []
+
+    for x in [x_tr, x_va, x_te]:
+        lin_eval.append(lin_auto.evaluate(squash(x), squash(x)))
+        dcnn_eval.append(dcnn_auto.evaluate(x, x))
+
+    log("Metrics: mse of LA {}, mse of DCA {}.".format(lin_eval, dcnn_eval), lvl=1)
 
     # TSNE attempt 2
-    '''x_latent = lin_enc.predict(x=squash(x_te))
+    x_latent = lin_enc.predict(x=squash(x_te))
     y_latent = [np.where(r == 1)[0][0] for r in y_te]
     labels = [dat.CLASSES[i] for i in y_latent]
     Y = tsne.tsne(x_latent, 3, 50, 20.0)
     pylab.scatter(Y[:, 0], Y[:, 1], 20, y_latent)
     pylab.show()
     pylab.scatter(Y[:, 0], Y[:, 2], 20, y_latent)
-    pylab.show()'''
+    pylab.show()

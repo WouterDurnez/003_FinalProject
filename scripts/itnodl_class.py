@@ -20,6 +20,7 @@ import random as rnd
 from math import ceil
 from pprint import PrettyPrinter
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -30,7 +31,7 @@ from keras.layers import Dense, Flatten, Activation, Dropout, Conv2D, BatchNorma
 from keras.models import Sequential, Model, load_model
 from keras.preprocessing.image import ImageDataGenerator
 from keras.utils import plot_model
-from sklearn.metrics import hamming_loss, accuracy_score, f1_score
+from sklearn.metrics import hamming_loss, accuracy_score, f1_score, jaccard_similarity_score
 
 import itnodl_data as dat
 import itnodl_help as hlp
@@ -100,12 +101,16 @@ def build_classifier(image_dim: int, compression_factor: int,
 
         input_shape = (image_dim, image_dim, 3)
 
-        classifier.add(Conv2D(2 * encoding_dim, (3, 3), padding='same', activation='relu', input_shape=input_shape,
+        image_size = np.prod(input_shape)
+
+        # Build model
+        classifier = Sequential()
+        classifier.add(Conv2D(image_dim, (3, 3), padding='same', activation='relu', input_shape=input_shape,
                               kernel_initializer='random_uniform', bias_initializer='zeros'))
         classifier.add(BatchNormalization())
         classifier.add(MaxPooling2D((2, 2), padding='same'))
 
-        classifier.add(Conv2D(encoding_dim, (3, 3), padding='same', activation='relu',
+        classifier.add(Conv2D(image_dim // compression_factor, (3, 3), padding='same', activation='relu',
                               kernel_initializer='random_uniform', bias_initializer='zeros'))
         classifier.add(BatchNormalization())
         classifier.add(MaxPooling2D((2, 2), padding='same', name='encoder'))
@@ -239,6 +244,7 @@ def evaluate_classifier(classifier: Model, x: np.ndarray, y: np.ndarray, thresho
     # metrics['Precision score (macro)'] = precision_score(y, y_pred, average='macro')
     metrics['F1 score (micro)'] = f1_score(y, y_pred, average='micro')
     metrics['Label-based accuracy'] = label_based_accuracy(y, y_pred)
+    metrics['Jaccard similarity score'] = jaccard_similarity_score(y, y_pred)
     # metrics['F1 score (macro)'] = f1_score(y, y_pred, average='macro')
 
     """In a multi-class classification setup, micro-average is preferable if you suspect
@@ -254,7 +260,8 @@ def evaluate_classifier(classifier: Model, x: np.ndarray, y: np.ndarray, thresho
 # Visualize #
 #############
 
-def plot_model_histories(histories: dict, image_dim: int, compression_factor: int, save=True, plot=True) -> plt.Axes:
+def plot_model_histories(histories: dict, image_dim: int, compression_factor: int, loss: str, save=True,
+                         plot=True) -> plt.Axes:
     """
     Plot the histories of the model metrics 'loss' and 'accuracy'.
 
@@ -279,6 +286,7 @@ def plot_model_histories(histories: dict, image_dim: int, compression_factor: in
                                      sharey='none',
                                      figsize=(11, 10),
                                      constrained_layout=True)
+    fig.dpi = 150
 
     # Fill axes
     for col in range(2):
@@ -298,38 +306,45 @@ def plot_model_histories(histories: dict, image_dim: int, compression_factor: in
                     key = 'acc' if col == 0 else 'val_acc'
                     title = '{} accuracy'.format(train_or_val)
                     y_label = 'Accuracy'
-                    y_limit = (.7, .9)
+                    y_limit = (0.6, 1)
 
                 else:
                     key = 'loss' if col == 0 else 'val_loss'
                     title = '{} loss'.format(train_or_val)
                     y_label = 'Loss (binary cross entropy)'
-                    y_limit = (.2, .7)
+                    y_limit = (0, 1)
 
+                # Plot label
+                plot_label = "{}".format(label.capitalize()) if row == 0 and col == 0 else ""
                 # Plot training & validation accuracy values
-                ax.plot(history.history[key], label="Model: {}".format(label), color=colors[color_counter])
+                ax.plot(history.history[key], label=plot_label, color=colors[color_counter])
 
                 # Add vertical line to indicate early stopping
-                ax.axvline(x=n_epochs, linestyle='--', color=colors[color_counter])
+                ax.axvline(x=n_epochs - 1, linestyle='--', color=colors[color_counter])
 
                 # Set a title, the correct y-label, and the y-limit
-                ax.set_title(title, fontdict={'fontweight': 'semibold'})
-                ax.set_ylabel(y_label)
+                ax.set_title(title, fontdict={'fontweight': 'semibold', 'family': 'serif'})
+                ax.set_ylabel(y_label, fontdict={'family': 'serif'})
                 ax.set_ylim(y_limit)
 
                 color_counter += 1
 
-            if row == 1: ax.set_xlabel('Epoch')
-            ax.set_xlim(0, 200)
-            ax.legend(loc='best')
+                # ax.set_yscale("log")
+
+            if row == 0 and col == 0:
+                ax.legend(loc='best', prop={'family': 'serif'})
+
+            if row == 1: ax.set_xlabel('Epoch', fontdict={'family': 'serif'})
+            # ax.set_xlim(0, 100)
+            # fig.legend(loc='best', prop={'weight': 'bold', 'family':'serif'})
 
     # Title
-    plt.suptitle(
+    '''plt.suptitle(
         "Training histories of classifier models (image dim {} - compression {})".format(image_dim, compression_factor),
-        fontweight='bold')
+        fontweight='bold')'''
 
     # Build model path
-    evaluation_label = 'histories_im_dim{}comp{}'.format(image_dim, compression_factor)
+    evaluation_label = 'histories_im_dim{}comp{}loss{}'.format(image_dim, compression_factor, loss)
     plot_path = os.path.join(os.pardir, "models", "classifiers", "plots", evaluation_label + ".png")
 
     # Show 'n tell
@@ -339,7 +354,8 @@ def plot_model_histories(histories: dict, image_dim: int, compression_factor: in
     return ax
 
 
-def plot_model_metrics(evaluations: dict, image_dim: int, compression_factor: int, save=True, plot=True) -> plt.Axes:
+def plot_model_metrics(evaluations: dict, image_dim: int, compression_factor: int, loss: str, save=True,
+                       plot=True) -> plt.Axes:
     """
     Visualize comparison of approaches in terms of chosen metrics.
 
@@ -359,17 +375,18 @@ def plot_model_metrics(evaluations: dict, image_dim: int, compression_factor: in
     ax = sns.catplot(x="metric", y="value", data=evaluations_long, kind='bar', legend=None,
                      hue="approach", palette="pastel", height=8, aspect=1.6)
     ax.despine(bottom=True, offset=10, trim=True)
-    ax.set_xlabels("Metric", fontdict={'fontweight': 'bold'})
+    ax.set_xlabels("", fontdict={'fontweight': 'bold', 'family': 'serif'})
     ax.set_ylabels("")
-    plt.legend(loc='best')
+    ax.set_xticklabels(fontdict={'fontweight': 'bold', 'family': 'serif'})
+    plt.legend(loc='best', prop={'weight': 'bold', 'family': 'serif'})
 
     # Title
-    plt.suptitle(
+    '''plt.suptitle(
         "Evaluation of classifier models (image dim {} - compression {})".format(image_dim, compression_factor),
-        fontweight='bold')
+        fontweight='bold')'''
 
     # Build model path
-    evaluation_label = 'evaluation_metrics_im_dim{}comp{}'.format(image_dim, compression_factor)
+    evaluation_label = 'evaluation_metrics_im_dim{}comp{}_loss{}'.format(image_dim, compression_factor, loss)
     model_path = os.path.join(os.pardir, "models", "classifiers", "plots", evaluation_label + ".png")
 
     # Show 'n tell
@@ -380,6 +397,7 @@ def plot_model_metrics(evaluations: dict, image_dim: int, compression_factor: in
 
 
 def plot_classifier_predictions(classifier: Sequential, approach: str, model_name: str, compression_factor: float,
+                                loss: str,
                                 x: np.ndarray, y_true: np.ndarray,
                                 examples=5, random=True, save=True, plot=True):
     """
@@ -397,9 +415,15 @@ def plot_classifier_predictions(classifier: Sequential, approach: str, model_nam
     :return: SubplotAxes
     """
 
-    log("Plotting model history")
+    log("Plotting classifier predictions.")
+
+    # Set font
+    font = {'fontname': 'Times New Roman Bold',
+            'fontfamily': 'serif',
+            'weight': 'bold'}
 
     # Set indices
+    rnd.seed(818)
     indices = rnd.sample(range(len(x)), examples) if random else [i for i in range(examples)]
 
     # Take subsets
@@ -441,13 +465,13 @@ def plot_classifier_predictions(classifier: Sequential, approach: str, model_nam
         # First row: show original images
         if row == 0:
             labels = [label for got_label, label in zip(y_true_sample[col], dat.CLASSES) if got_label == 1]
-            ax.set_title("Image label: {}".format(labels))
+            ax.set_title("Image label: {}".format(labels), fontdict=font)
             ax.imshow(original_image)
             ax.axis('off')
 
         # Second row: show predictions
         else:
-            ax.set_title("Predictions")
+            ax.set_title("Predictions", fontdict=font)
             # sns.barplot(y=y_pred_sample[col], hue=colors)
             ax.bar(x=range(len(dat.CLASSES)), height=y_pred_sample[col], color=colors)
             ax.axhline(y=.5, linestyle='--', color='black')
@@ -465,15 +489,130 @@ def plot_classifier_predictions(classifier: Sequential, approach: str, model_nam
     plt.tight_layout()
 
     # Full model name for file output
-    full_model_name = "predictions_" + model_name + '_im_dim' + str(image_dim) + '-comp' + str(int(compression_factor))
+    full_model_name = "predictions_" + model_name + '_im_dim' + str(image_dim) + '-comp' + str(
+        int(compression_factor)) + 'loss' + loss
 
     # Build model path
     model_path = os.path.join(os.pardir, "models", "classifiers", "plots", full_model_name + ".png")
 
     # Title
-    plt.suptitle(
+    '''plt.suptitle(
         "Predictions for <{}> approach (image dim {} - compression {})".format(approach, image_dim, compression_factor),
-        fontweight='bold')
+        fontweight='bold')'''
+
+    # Show 'n tell
+    if save: plt.savefig(model_path, dpi=150)
+    if plot: plt.show()
+
+    return fig, subplot_axes, indices
+
+
+def plot_classifier_prediction_comparison(classifiers: list, model_name: str, compression_factor: float, loss: str,
+                                          x: np.ndarray, y_true: np.ndarray,
+                                          examples=5, random=True, save=True, plot=True, indices=None):
+    """
+    Show some images, their true class labels, and the predicted class labels, for a given classifier.
+
+    :param classifier: model used to predict labels
+    :param model_name:
+    :param compression_factor:
+    :param x: images
+    :param y_true: true labels
+    :param examples: number of images to show
+    :param random: random selection of training images, or sequential (i.e. first #examples)
+    :param save: save to disk?
+    :param plot: show plot?
+    :return: SubplotAxes
+    """
+
+    log("Plotting classifier prediction comparison.")
+
+    # Set font
+    font = {'fontname': 'Times New Roman Bold',
+            'fontfamily': 'serif',
+            'weight': 'bold'}
+
+    # Set indices
+    if not indices:
+        rnd.seed(919)
+        indices = rnd.sample(range(len(x)), examples) if random else [i for i in range(examples)]
+    else:
+        indices = indices
+
+    # Take subsets
+    x_sample = x[indices]
+    y_true_sample = y_true[indices]
+    y_pred_sample = []
+
+    # Make predictions
+    for classifier in classifiers:
+        y_pred_sample.append(classifier.predict(x=x_sample))
+
+    # Get image dimension
+    image_dim = x.shape[1]
+
+    # Plot parameters
+    row_count = len(classifiers) + 1
+    col_count = examples
+    plot_count = row_count * col_count
+    # Initialize axes
+    fig, subplot_axes = plt.subplots(row_count,
+                                     col_count,
+                                     squeeze=True,
+                                     sharey='row',
+                                     figsize=(15, 12),
+                                     constrained_layout=True)
+
+    # Set colors
+    colors = sns.color_palette('pastel', n_colors=len(dat.CLASSES))
+
+    # Fill axes
+    for i in range(plot_count):
+
+        row = i // col_count
+        col = i % col_count
+
+        original_image = x_sample[col]
+
+        ax = subplot_axes[row][col]
+
+        # First row: show original images
+        if row == 0:
+            labels = [label for got_label, label in zip(y_true_sample[col], dat.CLASSES) if got_label == 1]
+            ax.set_title("Image label: {}".format(labels), fontdict=font)
+            ax.imshow(original_image)
+            ax.axis('off')
+
+        # Second, third, ... row: show predictions
+        else:
+            ax.set_title("Predictions", fontdict=font)
+            # sns.barplot(y=y_pred_sample[col], hue=colors)
+            ax.bar(x=range(len(dat.CLASSES)), height=y_pred_sample[row - 1][col], color=colors)
+            ax.axhline(y=.5, linestyle='--', color='black')
+            ax.set_xticks(ticks=range(len(dat.CLASSES)))
+            ax.set_xticklabels(dat.CLASSES)
+            ax.set_ylim(0, 1)
+            # ax.set_aspect(2)
+            for tick in ax.get_xticklabels():
+                tick.set_rotation(45)
+
+        for i in range(len(x_sample)):
+            subplot_axes[1][i].set_ylim(0, 1.0)
+
+    # General make-up
+    plt.tight_layout()
+
+    # Full model name for file output
+    full_model_name = "prediction_comparison" + model_name + '_im_dim' + str(image_dim) + '-comp' + str(
+        int(compression_factor)) + 'loss' + loss
+
+    # Build model path
+    model_path = os.path.join(os.pardir, "models", "classifiers", "plots", full_model_name + ".png")
+
+    # Title
+    '''plt.suptitle(
+        "Predictions for <{}> approach (image dim {} - compression {})".format(approach, image_dim, compression_factor),
+        fontweight='bold')'''
 
     # Show 'n tell
     if save: plt.savefig(model_path, dpi=150)
@@ -499,8 +638,8 @@ if __name__ == "__main__":
     set_up_model_directory('classifiers')
 
     # Dashboard
-    image_dim = 48
-    compression_factor = 48
+    image_dim = 96
+    compression_factor = 24
     loss = 'binary_crossentropy'
 
     # Set remaining parameters
@@ -509,8 +648,14 @@ if __name__ == "__main__":
     image_size = image_dim ** 2 * 3
     encoding_dim = image_size // compression_factor
 
+    # Plot parameters
+    font = {'family': 'serif',
+            'weight': 'bold'}
+    matplotlib.rc('font', **font)
+    rnd.seed(616)
+
     # Train or just load?
-    train = True
+    train = False
 
     # Get the data
     data, _ = dat.pipeline(image_dim=image_dim)
@@ -518,8 +663,15 @@ if __name__ == "__main__":
     x_va, y_va = data['x_val'], data['y_val']
     x_te, y_te = data['x_test'], data['y_test']
 
+    # Getting number of class objects per dataset
+    ''' 
+    print(np.unique([dat.CLASSES[i] for i in [np.where(r == 1)[0][0] for r in y_tr]], return_counts=True))
+    print(np.unique([dat.CLASSES[i] for i in [np.where(r == 1)[0][0] for r in y_va]], return_counts=True))
+    print(np.unique([dat.CLASSES[i] for i in [np.where(r == 1)[0][0] for r in y_te]], return_counts=True))
+    '''
+
     # Store classifiers and their histories
-    classifiers, histories, evaluations = {}, {}, {}
+    classifiers, histories, evaluations, comparison = {}, {}, {}, []
 
     # Model parameters to loop over
     parameter_combinations = [(False, False),
@@ -566,26 +718,37 @@ if __name__ == "__main__":
                                                                                       loss=loss,
                                                                                       from_scratch=from_scratch,
                                                                                       all_trainable=all_trainable,
-                                                                                      epochs=1, patience=0)
+                                                                                      epochs=300, patience=0)
 
             # Save history
             log("Saving history.", lvl=3)
             np.save(file=history_path, arr=histories[approach])
 
+        comparison.append(classifiers[full_classifier_name])
+
         # Evaluate classifier
-        evaluations[approach] = evaluate_classifier(classifiers[full_classifier_name], x=x_va, y=y_va, threshold=.5)
+        evaluations[approach] = evaluate_classifier(classifiers[full_classifier_name], x=x_te, y=y_te, threshold=.5)
 
         # Show some predictions
-        plot_classifier_predictions(classifier=classifiers[full_classifier_name], approach=approach,
-                                    model_name=full_classifier_name,
-                                    compression_factor=compression_factor,
-                                    x=x_va, y_true=y_va, examples=5, random=True,
-                                    save=True, plot=False)
+        _, _, indices = plot_classifier_predictions(classifier=classifiers[full_classifier_name], approach=approach,
+                                                    model_name=full_classifier_name,
+                                                    compression_factor=compression_factor,
+                                                    loss=loss,
+                                                    x=x_te, y_true=y_te, examples=5, random=True,
+                                                    save=True, plot=True)
 
     # Plot model histories
-    plot_model_histories(histories=histories, save=True, plot=False, image_dim=image_dim,
-                         compression_factor=compression_factor)
+    plot_model_histories(histories=histories, save=True, plot=True, image_dim=image_dim,
+                         compression_factor=compression_factor, loss=loss)
 
     # Plot model metrics
-    plot_model_metrics(evaluations=evaluations, save=True, plot=False, image_dim=image_dim,
-                       compression_factor=compression_factor)
+    plot_model_metrics(evaluations=evaluations, save=True, plot=True, image_dim=image_dim,
+                       compression_factor=compression_factor, loss=loss)
+
+    # Plot prediction comparison
+    plot_classifier_prediction_comparison(classifiers=comparison,
+                                          model_name='class_comparison',
+                                          compression_factor=compression_factor,
+                                          loss=loss, x=x_te, y_true=y_te, examples=5,
+                                          random=True, save=True, plot=True,
+                                          indices=indices)

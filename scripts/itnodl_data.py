@@ -133,13 +133,14 @@ def build_segmentation_dataset(train_list: list, val_list: list, image_dim: int,
         y_val[idx] = resize(cv2.imread(os.path.join(segm_folder, image_name + ".png")), (image_dim, image_dim, 3))
 
     # Keep random sample as test
-    test_indices = rnd.sample(range(x_val.shape[0]), k=len(x_val) // 2)
+    test_indices = rnd.sample(range(len(x_val)), k=len(x_val) // 2)
+    val_indices = [i for i in range(len(x_val)) if i not in test_indices]
 
     x_test = x_val[test_indices]
     y_test = y_val[test_indices]
 
-    x_val = x_val[np.invert(test_indices)]
-    y_val = y_val[np.invert(test_indices)]
+    x_val = x_val[val_indices]
+    y_val = y_val[val_indices]
 
     # Merge in dictionary
     data_segm = {
@@ -260,13 +261,14 @@ def pipeline(image_dim=214,
             log("Extracted {} validation images from {} classes.".format(x_val.shape[0], y_train.shape[1]), lvl=3)
 
             # Keep random sample as test
-            test_indices = rnd.sample(range(x_val.shape[0]), k=len(x_val) // 2)
+            test_indices = rnd.sample(range(len(x_val)), k=len(x_val) // 2)
+            val_indices = [i for i in range(len(x_val)) if i not in test_indices]
 
             x_test = x_val[test_indices]
             y_test = y_val[test_indices]
 
-            x_val = x_val[np.invert(test_indices)]
-            y_val = y_val[np.invert(test_indices)]
+            x_val = x_val[val_indices]
+            y_val = y_val[val_indices]
 
             data = {
                 'x_train': x_train,
@@ -332,10 +334,10 @@ def threshold(x: np.ndarray, threshold=.02, mono=True) -> np.ndarray:
     """
 
     # Convert to grayscale if needed
-    try:
+    if x.shape[-1] == 3:
         x_new = rgb2gray(x)
-    except:
-        x_new = x
+    else:
+        x_new = x.copy()
 
     # See where pixel values surpass the threshold
     super_threshold_indices = x_new > threshold
@@ -346,8 +348,14 @@ def threshold(x: np.ndarray, threshold=.02, mono=True) -> np.ndarray:
 
     # Convert back to color
     if mono:
-        return x_new[:, :, :, np.newaxis]
+        if x_new.shape[-1] == 1:
+            return x_new
+        else:
+            return x_new[:, :, :, np.newaxis]
     else:
+        if x_new.shape[-1] == 1:
+            x_new = np.squeeze(x_new, axis=(len(x_new.shape) - 1))
+        print(x_new.shape)
         return (gray2rgb(x_new))
 
 
@@ -389,7 +397,8 @@ def lift(x: np.ndarray) -> np.ndarray:
 # Visualize #
 #############
 
-def show_some(image_list: list, subtitles=None, n=10, random=True, title="", save=False, save_name="test"):
+def show_some(image_list: list, subtitles=None, model_type='autoencoders',
+              n=10, random=True, title="", save=False, save_name="test"):
     """
     Show some images in the training dataset.
 
@@ -433,7 +442,7 @@ def show_some(image_list: list, subtitles=None, n=10, random=True, title="", sav
 
     # Save plot if requested
     if save:
-        plot_path = os.path.join(os.pardir, "models", "segmentation", "plots", save_name + ".png")
+        plot_path = os.path.join(os.pardir, "models", model_type, "plots", save_name + ".png")
         plt.savefig(plot_path)
 
     plt.show()
@@ -554,7 +563,7 @@ if __name__ == '__main__':
     show_some(image_list=[x_te], n=10, random=False, title="Test images")
     show_some(image_list=[x_tr], n=10, random=False, title="Test images")
 
-    _, data_segm = pipeline(image_dim=48, class_data=True, segm_data=True)
+    _, data_segm = pipeline(image_dim=96, class_data=True, segm_data=True)
 
     x_val = data_segm['x_val']
     y_val = data_segm['y_val']

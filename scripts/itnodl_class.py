@@ -36,6 +36,8 @@ from sklearn.metrics import hamming_loss, accuracy_score, f1_score, jaccard_simi
 import itnodl_data as dat
 import itnodl_help as hlp
 from itnodl_auto import build_autoencoder
+from itnodl_class_inc import build_inception_classifier
+from itnodl_class_joint import joint_model
 from itnodl_help import log, set_up_model_directory
 
 
@@ -210,7 +212,7 @@ def label_based_accuracy(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     return float(np.mean(accuracies))
 
 
-def evaluate_classifier(classifier: Model, x: np.ndarray, y: np.ndarray, threshold=.5) -> dict:
+def evaluate_classifier(classifier: Model, x: np.ndarray, y: np.ndarray, threshold=.5, joint=False) -> dict:
     """
     Evaluate classifier on number of metrics.
 
@@ -227,7 +229,10 @@ def evaluate_classifier(classifier: Model, x: np.ndarray, y: np.ndarray, thresho
     metrics = {}
 
     # Get probabilities
-    y_prob = classifier.predict(x)
+    if joint:
+        y_prob = classifier.predict(x)[1]
+    else:
+        y_prob = classifier.predict(x)
 
     # ... and extract for predictions
     y_pred = y_prob
@@ -242,10 +247,10 @@ def evaluate_classifier(classifier: Model, x: np.ndarray, y: np.ndarray, thresho
     metrics['Hamming score'] = hamming_score(y, y_pred)
     # metrics['Precision score (micro)'] = precision_score(y, y_pred, average='micro')
     # metrics['Precision score (macro)'] = precision_score(y, y_pred, average='macro')
-    metrics['F1 score (micro)'] = f1_score(y, y_pred, average='micro')
-    metrics['Label-based accuracy'] = label_based_accuracy(y, y_pred)
-    metrics['Jaccard similarity score'] = jaccard_similarity_score(y, y_pred)
-    # metrics['F1 score (macro)'] = f1_score(y, y_pred, average='macro')
+    # metrics['F1 score (micro)'] = f1_score(y, y_pred, average='micro')
+    # metrics['Label-based accuracy'] = label_based_accuracy(y, y_pred)
+    metrics['Jaccard similarity index'] = jaccard_similarity_score(y, y_pred)
+    metrics['F1 score (macro)'] = f1_score(y, y_pred, average='macro')
 
     """In a multi-class classification setup, micro-average is preferable if you suspect
      there might be class imbalance (i.e you may have many more examples of one class
@@ -277,7 +282,7 @@ def plot_model_histories(histories: dict, image_dim: int, compression_factor: in
 
     # Set style
     sns.set_style('whitegrid')
-    colors = sns.color_palette('pastel', n_colors=3)
+    colors = sns.color_palette('pastel', n_colors=len(histories))
 
     # Initialize axes
     fig, subplot_axes = plt.subplots(2, 2,
@@ -507,7 +512,8 @@ def plot_classifier_predictions(classifier: Sequential, approach: str, model_nam
     return fig, subplot_axes, indices
 
 
-def plot_classifier_prediction_comparison(classifiers: list, model_name: str, compression_factor: float, loss: str,
+def plot_classifier_prediction_comparison(classifiers: list, names: list, model_name: str, compression_factor: float,
+                                          loss: str,
                                           x: np.ndarray, y_true: np.ndarray,
                                           examples=5, random=True, save=True, plot=True, indices=None):
     """
@@ -526,11 +532,16 @@ def plot_classifier_prediction_comparison(classifiers: list, model_name: str, co
     """
 
     log("Plotting classifier prediction comparison.")
+    sns.set_style('white')
 
     # Set font
     font = {'fontname': 'Times New Roman Bold',
             'fontfamily': 'serif',
             'weight': 'bold'}
+
+    # Set y-labels
+    if names == [] or len(names) != len(classifiers):
+        names = ['' for i in range(len(classifiers))]
 
     # Set indices
     if not indices:
@@ -545,8 +556,11 @@ def plot_classifier_prediction_comparison(classifiers: list, model_name: str, co
     y_pred_sample = []
 
     # Make predictions
-    for classifier in classifiers:
-        y_pred_sample.append(classifier.predict(x=x_sample))
+    for index, classifier in enumerate(classifiers):
+        if index == 4:
+            y_pred_sample.append(classifier.predict(x=x_sample)[1])
+        else:
+            y_pred_sample.append(classifier.predict(x=x_sample))
 
     # Get image dimension
     image_dim = x.shape[1]
@@ -560,7 +574,7 @@ def plot_classifier_prediction_comparison(classifiers: list, model_name: str, co
                                      col_count,
                                      squeeze=True,
                                      sharey='row',
-                                     figsize=(15, 12),
+                                     figsize=(15, 18),
                                      constrained_layout=True)
 
     # Set colors
@@ -585,13 +599,21 @@ def plot_classifier_prediction_comparison(classifiers: list, model_name: str, co
 
         # Second, third, ... row: show predictions
         else:
-            ax.set_title("Predictions", fontdict=font)
+            if row == 1:
+                ax.set_title("Predictions", fontdict=font)
+            else:
+                ax.set_title("", fontdict=font)
             # sns.barplot(y=y_pred_sample[col], hue=colors)
             ax.bar(x=range(len(dat.CLASSES)), height=y_pred_sample[row - 1][col], color=colors)
             ax.axhline(y=.5, linestyle='--', color='black')
             ax.set_xticks(ticks=range(len(dat.CLASSES)))
             ax.set_xticklabels(dat.CLASSES)
             ax.set_ylim(0, 1)
+            if col == 0:
+                ax.set_ylabel(names[row - 1], fontdict=font)
+            else:
+                ax.set_ylabel("")
+            ax.set_yticklabels([])
             # ax.set_aspect(2)
             for tick in ax.get_xticklabels():
                 tick.set_rotation(45)
@@ -641,6 +663,8 @@ if __name__ == "__main__":
     image_dim = 96
     compression_factor = 24
     loss = 'binary_crossentropy'
+    epochs = 300
+    patience = 50
 
     # Set remaining parameters
     autoencoder_name = 'conv_auto'
@@ -718,7 +742,7 @@ if __name__ == "__main__":
                                                                                       loss=loss,
                                                                                       from_scratch=from_scratch,
                                                                                       all_trainable=all_trainable,
-                                                                                      epochs=300, patience=0)
+                                                                                      epochs=epochs, patience=patience)
 
             # Save history
             log("Saving history.", lvl=3)
@@ -737,6 +761,58 @@ if __name__ == "__main__":
                                                     x=x_te, y_true=y_te, examples=5, random=True,
                                                     save=True, plot=True)
 
+    # Add INCEPTION classifier
+    log("Inception classifier", title=True)
+    inc_name = "conv_inc"
+    inc_path = os.path.join(os.pardir, "models", "classifiers", inc_name + ".h5")
+    inc_history_path = os.path.join(os.pardir, "models", "classifiers", "history", inc_name + "_history.npy")
+
+    try:
+        inc_classifier = load_model(filepath=inc_path)
+        log("Found model \'", inc_name, "\' locally.", lvl=3)
+        inc_history = np.load(file=inc_history_path).item()
+        log("Found model \'", inc_name, "\' history locally.", lvl=3)
+    except:
+        log("Failed to load INCEPTION model or history. Rebuilding", lvl=3)
+        inc_classifier, inc_history = build_inception_classifier(image_dim=image_dim,
+                                                                 x_tr=x_tr, y_tr=y_tr, x_va=x_va, y_va=y_va,
+                                                                 loss=loss, epochs=epochs, patience=patience, verbose=1)
+
+    classifiers["Inception-based"] = inc_classifier
+    histories["Inception-based"] = inc_history
+    evaluations["Inception-based"] = evaluate_classifier(inc_classifier, x=x_te, y=y_te, threshold=.5)
+
+    comparison.append(inc_classifier)
+
+    # Add JOINT classifier
+    log("Joint classifier", title=True)
+
+    # Full model name for file output
+    joint_name = "comb_model"
+    full_joint_name = "{}_im{}comp{}".format(joint_name, image_dim, compression_factor)
+    joint_path = os.path.join(os.pardir, "models", "classifiers", full_joint_name + ".h5")
+    joint_history_path = os.path.join(os.pardir, "models", "classifiers", "history", full_joint_name + "_history.npy")
+
+    try:
+        joint_classifier = load_model(filepath=joint_path)
+        log("Found model \'", inc_name, "\' locally.", lvl=3)
+        joint_history = np.load(file=joint_history_path).item()
+        log("Found model \'", inc_name, "\' history locally.", lvl=3)
+    except:
+        log("Failed to load JOINT model or history. Rebuilding", lvl=3)
+        joint_classifier, inc_history = joint_model(model_name='comb_model', image_dim=image_dim,
+                                                    compression_factor=compression_factor)
+
+    # Adjustment needed
+    joint_history.history['acc'] = joint_history.history['classifier_acc']
+    joint_history.history['val_acc'] = joint_history.history['val_classifier_acc']
+
+    classifiers["Joint training"] = joint_classifier
+    histories["Joint training"] = joint_history
+    evaluations["Joint training"] = evaluate_classifier(joint_classifier, x=x_te, y=y_te, threshold=.5, joint=True)
+
+    comparison.append(joint_classifier)
+
     # Plot model histories
     plot_model_histories(histories=histories, save=True, plot=True, image_dim=image_dim,
                          compression_factor=compression_factor, loss=loss)
@@ -747,8 +823,12 @@ if __name__ == "__main__":
 
     # Plot prediction comparison
     plot_classifier_prediction_comparison(classifiers=comparison,
+                                          names=['Approach 1', 'Approach 2', 'Approach 3', 'Inception', 'Joint'],
                                           model_name='class_comparison',
                                           compression_factor=compression_factor,
                                           loss=loss, x=x_te, y_true=y_te, examples=5,
                                           random=True, save=True, plot=True,
                                           indices=indices)
+
+    pp = PrettyPrinter(indent=4)
+    pp.pprint(evaluations)

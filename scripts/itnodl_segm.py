@@ -31,20 +31,29 @@ from skimage.color import gray2rgb
 
 import itnodl_data as dat
 import itnodl_help as hlp
+import itnodl_segm_unet as unet
 from itnodl_data import threshold
 from itnodl_help import log, set_up_model_directory
 
 
 #############
-# Dice loss #
+# Dice loss # (All scavenged from the internet)
 #############
 
-def dice_loss(y_true, y_pred):
-    numerator = 2 * tf.reduce_sum(y_true * y_pred)
-    # some implementations don't square y_pred
-    denominator = tf.reduce_sum(y_true + tf.square(y_pred))
+def dice_coef(y_true, y_pred) -> float:  # Taken from https://gist.github.com/wassname/7793e2058c5c9dacb5212c0ac0b18a8a
+    """
+    Dice = (2*|X & Y|)/ (|X|+ |Y|)
+         =  2*sum(|A*B|)/(sum(A^2)+sum(B^2))
+    ref: https://arxiv.org/pdf/1606.04797v1.pdf
+    """
 
-    return np.abs(numerator / (denominator + tf.keras.backend.epsilon()))
+    dice = np.sum(y_pred[y_true == 1]) * 2.0 / (np.sum(y_pred) + np.sum(y_true))
+
+    return dice
+
+
+def dice_coef_loss(y_true, y_pred):
+    return 1 - dice_coef(y_true, y_pred)
 
 
 #################
@@ -183,7 +192,6 @@ def build_segm_net(model_name: str, train: bool,
                                      full_model_name + "_architecture.png")
 
     # Keep track of history
-    history = []
     history_path = os.path.join(os.pardir, "models", "segmentation", "history", full_model_name + "_history.npy")
 
     # Try loading the model, ...
@@ -195,7 +203,9 @@ def build_segm_net(model_name: str, train: bool,
         log("Found model \'", model_name, "\' history locally.", lvl=3)
 
     # ... otherwise, create it
-    except:
+    except Exception as e:
+
+        log(e)
 
         log("Building segmentation network.")
         segnet = convolutional_segm_architecture(image_dim=image_dim, optimizer=optimizer, loss=loss,
@@ -205,8 +215,7 @@ def build_segm_net(model_name: str, train: bool,
         log("Network parameters: image dimension {}, image size {}, compression factor {}.".
             format(image_dim, image_size, compression_factor), lvl=3)
 
-    # Train the model (either continue training the old model, or train the new one)
-    if train:
+        # Train the model (either continue training the old model, or train the new one)
         log("Training deep convolutional segmentation network.", lvl=2)
 
         # Callbacks
@@ -251,7 +260,17 @@ def build_segm_net(model_name: str, train: bool,
 # Visualize #
 #############
 
-def plot_segmentation_results(image_list: list, labels: list, examples=5, random=True, save=True, plot=True, name=""):
+def mask(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    y_res = x.copy()
+    for color_channel in range(3):
+        y_res[:, :, :, color_channel] = np.multiply(x[:, :, :, color_channel],
+                                                    threshold(y, threshold=.5, mono=False)[:, :, :, 0])
+
+    return y_res
+
+
+def plot_segmentation_results(image_list: list, labels: list, examples=5, random=True, seed=818, save=True, plot=True,
+                              name="", indices=None):
     """
 
     """
@@ -261,15 +280,16 @@ def plot_segmentation_results(image_list: list, labels: list, examples=5, random
             'fontfamily': 'serif',
             'weight': 'bold'}
 
-    # Indices
-    if random:
-        rnd.seed(717)
-        indices = rnd.sample(range(image_list[0].shape[0]), k=examples)
-    else:
-        indices = [i for i in range(examples)]
+    image_dim = image_list[0].shape[1]
+    print(image_dim)
 
-    for i in image_list:
-        print(i.shape)
+    # Indices
+    if indices == None:
+        if random:
+            rnd.seed(seed)
+            indices = rnd.sample(range(image_list[0].shape[0]), k=examples)
+        else:
+            indices = [i for i in range(examples)]
 
     # Plot parameters
     row_count = len(image_list)
@@ -292,7 +312,6 @@ def plot_segmentation_results(image_list: list, labels: list, examples=5, random
 
         if image.shape[2] == 1:
             image = gray2rgb(image[:, :, 0])
-        print(image.shape)
 
         ax = subplot_axes[row][col]
 
@@ -309,7 +328,7 @@ def plot_segmentation_results(image_list: list, labels: list, examples=5, random
 
     # Save Figure
     # Full model name for file output
-    full_result_name = 'seg_' + name + '_im_dim' + str(image_dim) + '-comp' + str(int(compression_factor))
+    full_result_name = 'seg_' + name + '_im_dim' + str(image_dim)
 
     # Build model path
     model_path = os.path.join(os.pardir, "models", "segmentation", "plots", full_result_name + ".png")
@@ -319,7 +338,7 @@ def plot_segmentation_results(image_list: list, labels: list, examples=5, random
     if plot: plt.show()
 
 
-def plot_model_histories(history: History, model_type="segmentation", save=True, plot=True) -> plt.Axes:
+def plot_model_history(history: History, image_dim: int, model_type="segmentation", save=True, plot=True) -> plt.Axes:
     """
     Plot the histories of the model metrics 'loss' and 'val loss'.
 
@@ -361,7 +380,7 @@ def plot_model_histories(history: History, model_type="segmentation", save=True,
     # Set a title, the correct y-label, and the y-limit
     ax.set_ylabel(y_label, fontdict={'fontname': 'Times New Roman'})
     ax.set_ylim(0.1, 1.2)
-    ax.set_yscale("log")
+    # ax.set_yscale("log")
 
     ax.set_xlabel('Epoch', fontdict={'fontname': 'Times New Roman'})
     ax.set_xlim(0, 500)
@@ -377,6 +396,91 @@ def plot_model_histories(history: History, model_type="segmentation", save=True,
     if plot: plt.show()
 
     return fig
+
+
+def plot_model_histories(histories: dict, image_dim: int, compression_factor: int, loss: str, save=True,
+                         plot=True) -> plt.Axes:
+    """
+    Plot the histories of the model metrics 'loss' and 'accuracy'.
+
+    :param histories: histories of trained models
+    :param image_dim: image dimension
+    :param compression_factor: (sic)
+    :param save: save plot to png
+    :param plot: show plot
+    :return: plot axes
+    """
+
+    log("Plotting model metrics.", lvl=2)
+
+    # Set style
+    sns.set_style('whitegrid')
+    colors = sns.color_palette('pastel', n_colors=len(histories))
+
+    # Initialize axes
+    fig, subplot_axes = plt.subplots(1, 2,
+                                     squeeze=False,
+                                     sharex='none',
+                                     sharey='none',
+                                     figsize=(11, 4),
+                                     constrained_layout=True)
+    fig.dpi = 150
+
+    # Fill axes
+    for col in range(2):
+
+        train_or_val = 'Training' if col == 0 else 'Validation'
+
+        ax = subplot_axes[0][col]
+
+        color_counter = 0
+        for label, history in histories.items():
+
+            n_epochs = len(history.history['loss'])
+
+            key = 'loss' if col == 0 else 'val_loss'
+            title = '{} loss'.format(train_or_val)
+            y_label = 'Loss (mean squared error)' if col == 0 else ""
+            y_limit = (0, 1)
+
+            # Plot label
+            plot_label = "{}".format(label.capitalize())
+            # Plot training & validation accuracy values
+            ax.plot(history.history[key], label=plot_label, color=colors[color_counter])
+
+            # Add vertical line to indicate early stopping
+            ax.axvline(x=n_epochs - 1, linestyle='--', color=colors[color_counter])
+
+            # Set a title, the correct y-label, and the y-limit
+            ax.set_title(title, fontdict={'fontweight': 'semibold', 'family': 'serif'})
+            ax.set_ylabel(y_label, fontdict={'family': 'serif'})
+            ax.set_ylim(y_limit)
+
+            color_counter += 1
+
+            # ax.set_yscale("log")
+
+            if col == 0:
+                ax.legend(loc='best', prop={'family': 'serif'})
+
+            ax.set_xlabel('Epoch', fontdict={'family': 'serif'})
+            # ax.set_xlim(0, 100)
+            # fig.legend(loc='best', prop={'weight': 'bold', 'family':'serif'})
+
+    # Title
+    '''plt.suptitle(
+        "Training histories of classifier models (image dim {} - compression {})".format(image_dim, compression_factor),
+        fontweight='bold')'''
+
+    # Build model path
+    evaluation_label = 'histories_segm_im_dim{}comp{}loss{}'.format(image_dim, compression_factor, loss)
+    plot_path = os.path.join(os.pardir, "models", "segmentation", "plots", evaluation_label + ".png")
+
+    # Show 'n tell
+    if save: fig.savefig(plot_path, dpi=fig.dpi)
+    if plot: plt.show()
+
+    return ax
 
 
 ########
@@ -398,12 +502,12 @@ if __name__ == "__main__":
     image_dim = 96
     compression_factor = 24
     train = False
-    epochs = 200
-    patience = 20
+    epochs = 500
+    patience = 50
     loss = 'mean_squared_error'
 
     # Set remaining parameters
-    segmentation_name = 'conv_segm2'
+    segmentation_name = 'conv_segm'
     image_size = image_dim ** 2 * 3
     encoding_dim = image_size // compression_factor
 
@@ -432,7 +536,8 @@ if __name__ == "__main__":
 
     plot_segmentation_results(image_list=[x_tr, y_tr, y_tr_pred, threshold(y_tr_pred, threshold=.5, mono=False)],
                               labels=["Original", "Target", "Predicted", "Threshold"],
-                              examples=5, random=True, save=True, plot=True, name="train")
+                              examples=5, random=True, save=True, plot=True, name="train", seed=87)
+    #  indices=[49, 109, 147]
 
     plot_segmentation_results(image_list=[x_va, y_va, y_va_pred, threshold(y_va_pred, threshold=.5, mono=False)],
                               labels=["Original", "Target", "Predicted", "Threshold"],
@@ -444,12 +549,31 @@ if __name__ == "__main__":
         examples=5, random=True, save=True, plot=True, name="test")
 
     # Visualize histories
-    plot_model_histories(history=history, save=True, plot=True, model_type="Segmentation")
+    plot_model_history(history=history, image_dim=image_dim, save=True, plot=True, model_type="Segmentation")
 
     # Evaluation
     segnet_eval = []
+    segnet_dice = []
 
     for x, y in zip([x_tr, x_va, x_te], [y_tr, y_va, y_te]):
         segnet_eval.append(segnet.evaluate(x, y))
+        segnet_dice.append(dice_coef(y, segnet.predict(x)))
 
     print(segnet_eval)
+
+    # Compare with U-Net
+    unet_model, unet_history = unet.build_unet_segmentation_network(model_name='conv_segm_unet', x_tr=x_tr, y_tr=y_tr,
+                                                                    x_va=x_va,
+                                                                    y_va=y_va,
+                                                                    epochs=epochs, optimizer='adam', loss=loss,
+                                                                    patience=patience)
+
+    plot_model_history(history=unet_history, image_dim=image_dim, save=True, plot=True, model_type="Segmentation")
+
+    histories = {
+        "Home-made": history,
+        "U-Net-based": unet_history
+    }
+
+    plot_model_histories(histories=histories, image_dim=96, compression_factor=24,
+                         loss='mean squared error', save=True, plot=True)

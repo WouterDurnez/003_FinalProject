@@ -3,9 +3,12 @@
 \BOOKMARK [2][-]{subsection.2.1}{PCA vs autoencoder}{section.2}% 3
 \BOOKMARK [2][-]{subsection.2.2}{Nonlinear and convolutional}{section.2}% 4
 \BOOKMARK [1][-]{section.3}{Classification}{}% 5
-\BOOKMARK [2][-]{subsection.3.1}{Object classification network}{section.3}% 6
-\BOOKMARK [2][-]{subsection.3.2}{Reflection}{section.3}% 7
-\BOOKMARK [1][-]{section.4}{Segmentation}{}% 8
-\BOOKMARK [2][-]{subsection.4.1}{Binary segmentation network}{section.4}% 9
-\BOOKMARK [2][-]{subsection.4.2}{Reflection}{section.4}% 10
-\BOOKMARK [1][-]{section.5}{Discussion}{}% 11
+\BOOKMARK [2][-]{subsection.3.1}{Object classification networks}{section.3}% 6
+\BOOKMARK [2][-]{subsection.3.2}{Inception-based classification}{section.3}% 7
+\BOOKMARK [2][-]{subsection.3.3}{Jointly-trained classification network}{section.3}% 8
+\BOOKMARK [2][-]{subsection.3.4}{Reflection}{section.3}% 9
+\BOOKMARK [1][-]{section.4}{Segmentation}{}% 10
+\BOOKMARK [2][-]{subsection.4.1}{Binary segmentation network}{section.4}% 11
+\BOOKMARK [2][-]{subsection.4.2}{U-Net-based segmentation network}{section.4}% 12
+\BOOKMARK [2][-]{subsection.4.3}{Reflection}{section.4}% 13
+\BOOKMARK [1][-]{section.5}{Discussion}{}% 14

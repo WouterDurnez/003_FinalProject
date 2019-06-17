@@ -1,26 +1,42 @@
 \babel@toc {english}{}
 \babel@toc {english}{}
 \contentsline {section}{\numberline {1}Introduction}{1}{section.1}% 
-\contentsline {paragraph}{Datasets}{2}{section*.2}% 
-\contentsline {paragraph}{Image dimensions and compression factors}{3}{section*.3}% 
-\contentsline {paragraph}{Platform}{3}{section*.4}% 
-\contentsline {section}{\numberline {2}Autoencoders}{3}{section.2}% 
-\contentsline {subsection}{\numberline {2.1}PCA vs autoencoder}{3}{subsection.2.1}% 
-\contentsline {subsection}{\numberline {2.2}Nonlinear and convolutional}{5}{subsection.2.2}% 
-\contentsline {paragraph}{Architectures}{5}{section*.5}% 
-\contentsline {paragraph}{Network parameters}{6}{section*.6}% 
+\contentsline {paragraph}{Datasets}{1}{section*.2}% 
+\contentsline {paragraph}{General parameters}{3}{section*.3}% 
+\contentsline {paragraph}{Platform}{4}{section*.4}% 
+\contentsline {section}{\numberline {2}Autoencoders}{4}{section.2}% 
+\contentsline {subsection}{\numberline {2.1}PCA vs autoencoder}{4}{subsection.2.1}% 
+\contentsline {subsection}{\numberline {2.2}Nonlinear and convolutional}{6}{subsection.2.2}% 
+\contentsline {paragraph}{Architectures}{6}{section*.5}% 
+\contentsline {paragraph}{Network parameters}{7}{section*.6}% 
 \contentsline {paragraph}{Evaluation}{9}{section*.7}% 
-\contentsline {paragraph}{Latent space visualization}{9}{section*.8}% 
-\contentsline {section}{\numberline {3}Classification}{10}{section.3}% 
-\contentsline {subsection}{\numberline {3.1}Object classification network}{10}{subsection.3.1}% 
-\contentsline {paragraph}{Architectures}{10}{section*.9}% 
-\contentsline {paragraph}{Network parameters}{10}{section*.10}% 
-\contentsline {paragraph}{Evaluation}{13}{section*.11}% 
-\contentsline {subsection}{\numberline {3.2}Reflection}{13}{subsection.3.2}% 
-\contentsline {section}{\numberline {4}Segmentation}{13}{section.4}% 
-\contentsline {subsection}{\numberline {4.1}Binary segmentation network}{13}{subsection.4.1}% 
-\contentsline {paragraph}{Architecture}{13}{section*.12}% 
-\contentsline {paragraph}{Network parameters}{15}{section*.13}% 
-\contentsline {paragraph}{Evaluation}{15}{section*.14}% 
-\contentsline {subsection}{\numberline {4.2}Reflection}{17}{subsection.4.2}% 
-\contentsline {section}{\numberline {5}Discussion}{17}{section.5}% 
+\contentsline {paragraph}{Latent space visualization}{10}{section*.8}% 
+\contentsline {section}{\numberline {3}Classification}{11}{section.3}% 
+\contentsline {subsection}{\numberline {3.1}Object classification networks}{11}{subsection.3.1}% 
+\contentsline {paragraph}{Architecture}{13}{section*.9}% 
+\contentsline {paragraph}{Data augmentation}{13}{section*.10}% 
+\contentsline {paragraph}{Network parameters}{13}{section*.11}% 
+\contentsline {paragraph}{Evaluation}{13}{section*.12}% 
+\contentsline {paragraph}{Expansion on homemade models}{16}{section*.13}% 
+\contentsline {subsection}{\numberline {3.2}Inception-based classification}{18}{subsection.3.2}% 
+\contentsline {paragraph}{Architectures}{18}{section*.14}% 
+\contentsline {paragraph}{Network parameters}{18}{section*.15}% 
+\contentsline {paragraph}{Evaluation}{18}{section*.16}% 
+\contentsline {subsection}{\numberline {3.3}Jointly-trained classification network}{18}{subsection.3.3}% 
+\contentsline {paragraph}{Architectures}{21}{section*.17}% 
+\contentsline {paragraph}{Network parameters}{21}{section*.18}% 
+\contentsline {paragraph}{Evaluation}{21}{section*.19}% 
+\contentsline {subsection}{\numberline {3.4}Reflection}{24}{subsection.3.4}% 
+\contentsline {section}{\numberline {4}Segmentation}{26}{section.4}% 
+\contentsline {subsection}{\numberline {4.1}Binary segmentation network}{26}{subsection.4.1}% 
+\contentsline {paragraph}{Architecture}{26}{section*.20}% 
+\contentsline {paragraph}{Network parameters}{26}{section*.21}% 
+\contentsline {paragraph}{Evaluation}{26}{section*.22}% 
+\contentsline {subsection}{\numberline {4.2}U-Net-based segmentation network}{30}{subsection.4.2}% 
+\contentsline {paragraph}{Architecture}{30}{section*.23}% 
+\contentsline {paragraph}{Network parameters}{30}{section*.24}% 
+\contentsline {paragraph}{Evaluation}{30}{section*.25}% 
+\contentsline {subsection}{\numberline {4.3}Reflection}{30}{subsection.4.3}% 
+\contentsline {paragraph}{Possible enhancement strategies}{30}{section*.26}% 
+\contentsline {paragraph}{Observation}{34}{section*.27}% 
+\contentsline {section}{\numberline {5}Discussion}{34}{section.5}% 

@@ -13,9 +13,9 @@
 
 \subsection{PCA vs autoencoder}
 
-\textbf{Principal Component Analysis} (or PCA) is a statistical technique that is used to transform a set of (potentially) correlated data vectors into a (smaller) number of linearly uncorrelated variables---the Principal Components (PCs). They are sorted in such a way that the first PC accounts for the largest amount of variability, and the subsequent PCs cover a maximal portion of the remaining variance while remaining orthogonal with the preceding PCs.
+\textbf{Principal Component Analysis} (or PCA) is a statistical technique that is used to transform a set of (potentially) correlated data vectors into a (smaller) number of linearly uncorrelated variables---the Principal Components (PCs). They are sorted in such a way that the first PC accounts for the largest amount of variability, and each subsequent PC covers a maximal portion of the remaining variance while remaining orthogonal with the preceding PCs.
 
-The principal component decomposition of a data matrix $\mathbf{X}$ is described by
+The principal component decomposition of a data matrix $\mathbf{X}$ (with $n$ rows and $p$ columns) is described by
 
 \begin{equation} \label{eq:1}
 	\mathbf{T} = \mathbf{XW}
@@ -35,7 +35,7 @@ The goal of PCA can then be described as finding a projection so that the best l
 	\mathbf{L_{PCA}} = \norm{\mathbf{X} - \mathbf{T_L W ^\intercal_L  }}_2^2
 \end{equation}
 
-This statistical method is closely related to a specific type of neural network---the \textbf{linear autoencoder (LA)} (\ref{fig:linear_autoencoder}). This network takes a data vector as input, passes it through a single hidden layer (typically smaller in dimensionality than the input), and attempts to reconstruct the data in the output layer using linear activation functions. As such, the network is forced to learn an optimal strategy in order to minimize the reconstruction loss.
+This statistical method is closely related to a specific type of neural network---the \textbf{linear autoencoder (LA)} (see figure \ref{fig:linear_autoencoder}). This neural network takes a data vector as input, passes it through a single hidden layer (typically smaller in dimensionality than the input), and attempts to reconstruct the data in the output layer using linear activation functions. As such, the network is forced to learn an optimal strategy in order to minimize the reconstruction loss.
 
 \begin{figure}[htbp]
 	\begin{center}
@@ -64,7 +64,7 @@ By definition, training this network means attempting to minimize the reconstruc
 
 We can see that optimizing the weight matrix for this linear autoencoder for all intents and purposes equates to the solution for PCA (\ref{eq:3}).
 
-A difference between both approaches can be found in the boundaries of the dimensionality. In linear autoencoders, the hidden layer can be made up of more nodes than the input and output layers, meaning that the data is transformed to a feature space greater than the original input space.
+A difference between both approaches can be found in the boundaries of the dimensionality. In linear autoencoders, the hidden layer can be made up of more nodes than the input and output layers, meaning that the data is transformed to a feature space greater than the original input space. PCA, on the other hand, can never yield more PCs than the dimensionality of the input space.
 
 
 
@@ -74,7 +74,7 @@ A difference between both approaches can be found in the boundaries of the dimen
 \subsection{Nonlinear and convolutional}
 \label{sec:auto2}
 
-In this section, two distinct autoencoders are described. A first autoencoder has a linear architecture---it thus consists of an input layer, output layer, and a single hidden layer. A second autoencoder is created by training a deep convolutional neural network. The architecture for both autoencoders is shown in figures \ref{fig:auto1} and \ref{fig:auto2}.
+In this section, two distinct autoencoders are described\footnote{The code for this section can be found in \texttt{scripts/itnodl\_auto.py}.}. The first autoencoder has a linear architecture---it thus consists of an input layer, output layer, and a single hidden layer. A second autoencoder is created by training a deep convolutional neural network. The architecture for both autoencoders is shown in figures \ref{fig:auto1} and \ref{fig:auto2}. 
 
 \begin{figure}[!htbp]
 	\begin{center}
@@ -96,7 +96,7 @@ In this section, two distinct autoencoders are described. A first autoencoder ha
 
 \begin{itemize}
 
-	\item{\textit{ReLU} is a mathematically simple, and thus computationally cheap transfer function. This implies less strain on the CPU during training.}
+	\item{\textit{ReLU} is a mathematically simple, and thus computationally cheap transfer function. This implies less strain on the CPU during training (a sorely needed benefit).}
 	\item{\textit{ReLU} will likely converge faster during training, since the function slope doesn't 'plateau', as can be the case when using \textit{sigmoid} or \textit{tanh} transfer functions.}
 	\item{Since \textit{ReLU} is defined as zero for negative input values, it is a sparsely activated transfer function---it is likely that not all input causes activation, which translates to a lower computational demand.}
 
@@ -104,7 +104,7 @@ In this section, two distinct autoencoders are described. A first autoencoder ha
 
 The final layer uses a sigmoid activation function, since we require output in the $[0, 1]$ range.
 
-\paragraph{Network parameters} A number of parameters were equal in both autoencoder networks. The models were each designed to accept $96\times96\times3$-sized images as input, and were trained to reconstruct the images in those same dimensions. The 'bottleneck' layer in the middle of the networks---capturing the encoded representation---consisted of 1152 nodes, corresponding with a compression factor of 24. The encoding dimension was chosen after some experimentation: I ran the model with different values, and observed the evolution of the loss function as well as the eventual reconstructed images. Both models were set to train for \textit{200 epochs}. If no improvement was detected in the validation loss for 20 epochs, training \textit{stopped early}. This was implemented to avoid overfitting. In training, I used an \textit{Adam} optimizer algorithm (default parameters), and used \textit{mean squared error} to compute loss. 
+\paragraph{Network parameters} A number of parameters were equal in both autoencoder networks. The models were each designed to accept $96\times96\times3$-sized images as input, and were trained to reconstruct the images in those same dimensions. The 'bottleneck' layer in the middle of the networks---capturing the encoded representation---consisted of 1152 nodes, corresponding with a compression factor of 24. The encoding dimension was chosen after some experimentation: I ran the model with different values, and observed the evolution of the loss function as well as the eventual reconstructed images. Both models were set to train for \textit{200 epochs}. If no improvement was detected in the validation loss for 20 epochs, training \textit{stopped early}. This was implemented to avoid overfitting. In training, I used an \textit{Adam} optimizer algorithm (default parameters), and chose \textit{mean squared error} to compute reconstruction loss. 
 
 \begin{figure}[!htbp]
 	\begin{center}
@@ -146,9 +146,9 @@ The final layer uses a sigmoid activation function, since we require output in t
 
 
 \begin{itemize}
-	\item The deep convolutional autoencoder took a longer time to converge to an optimal solution (under the early stopping criteria) compared to the linear autoencoder. This is unsurprising, given the different number of training parameters---there are a lot more options for the DCA to improve its reconstruction strategy.
+	\item The deep convolutional autoencoder took a longer time to converge to an optimal solution (under the early stopping criteria) compared to the linear autoencoder. This is unsurprising, given the different number of training parameters---there are a lot more options for the DCA to improve and fine-tune its reconstruction strategy.
 	\item The final DCA model was characterized by a significant lesser amount of loss, compared to the LA model (see table \ref{tab:auto_eval}). This quality difference is also apparent from the visual reconstruction of the test images (figure \ref{fig:auto_visual}).
 	\item The evaluation table (table \ref{tab:auto_eval}) shows that, for the LA, the reconstruction loss is higher for the evaluation and test images, compared to the training image reconstruction loss. The DCA, on the other hand, shows a fairly constant loss over all datasets, seen and unseen. This implies that the DCA was better at capturing the underlying, example-agnostic features, whereas the LA's learnt strategy was more limited to the images it was presented with during training.
 \end{itemize}
 
-\paragraph{Latent space visualization} There are several options to visualize the space of the encoded representations. One option is to take the decoding part of the network---that is, the encoded layer serves as input layer, and constructs an image based on the latent representation it receives. Presenting this decoder subnetwork with a 'one-hot encoded' input vector would then generate an 'eigenface'. This is feasible when the latent space is limited in dimensionality, otherwise we need a way to identify the most important nodes (if that is at all possible). In case of LA, this translates to finding the eigenvalues of the weight matrix. In case of DCA, such an approach is not so straightforward. 
+\paragraph{Latent space visualization} There are several options to visualize the space of the encoded representations. One option is to take the decoding part of the network---that is, the encoded layer serves as input layer, and constructs an image based on the latent representation it receives. Presenting this decoder subnetwork with a 'one-hot encoded' input vector would then generate an 'eigenface'. This is feasible when the latent space is limited in dimensionality, otherwise we need a way to rank the importance of the encoded features (if that is at all possible). In case of LA, this translates to finding the eigenvalues of the weight matrix. In case of DCA, such an approach is not so straightforward.

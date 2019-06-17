@@ -20,64 +20,108 @@
 \babel@aux{english}{}
 \@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
 \newlabel{sec:intro}{{1}{1}{Introduction}{section.1}{}}
-\@writefile{toc}{\contentsline {paragraph}{Datasets}{2}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Datasets}{1}{section*.2}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Dataset definition per section. Selected from main data corpus using class filter ['aeroplane', 'car', 'chair', 'dog', 'bird'].}}{2}{table.1}\protected@file@percent }
 \newlabel{tab:datasets}{{1}{2}{Dataset definition per section. Selected from main data corpus using class filter ['aeroplane', 'car', 'chair', 'dog', 'bird']}{table.1}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Number of images per class, for each of the classification datasets.}}{3}{table.2}\protected@file@percent }
-\newlabel{tab:classcounts}{{2}{3}{Number of images per class, for each of the classification datasets}{table.2}{}}
-\@writefile{toc}{\contentsline {paragraph}{Image dimensions and compression factors}{3}{section*.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Platform}{3}{section*.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {2}Autoencoders}{3}{section.2}\protected@file@percent }
-\newlabel{sec:auto}{{2}{3}{Autoencoders}{section.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}PCA vs autoencoder}{3}{subsection.2.1}\protected@file@percent }
-\newlabel{eq:1}{{1}{3}{PCA vs autoencoder}{equation.2.1}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Number of images per class, for each of the classification datasets.}}{2}{table.2}\protected@file@percent }
+\newlabel{tab:classcounts}{{2}{2}{Number of images per class, for each of the classification datasets}{table.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Project code structure.}}{3}{figure.1}\protected@file@percent }
+\newlabel{fig:project_structure}{{1}{3}{Project code structure}{figure.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{General parameters}{3}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Platform}{4}{section*.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Autoencoders}{4}{section.2}\protected@file@percent }
+\newlabel{sec:auto}{{2}{4}{Autoencoders}{section.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}PCA vs autoencoder}{4}{subsection.2.1}\protected@file@percent }
+\newlabel{eq:1}{{1}{4}{PCA vs autoencoder}{equation.2.1}{}}
 \newlabel{eq:2}{{2}{4}{PCA vs autoencoder}{equation.2.2}{}}
 \newlabel{eq:3}{{3}{4}{PCA vs autoencoder}{equation.2.3}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Linear autoencoder architecture with input dimension 6, encoding dimension 3, and compression factor 2 (taken from \leavevmode {\color {blue}\url  {https://www.jeremyjordan.me/autoencoders/}}).}}{4}{figure.1}\protected@file@percent }
-\newlabel{fig:linear_autoencoder}{{1}{4}{Linear autoencoder architecture with input dimension 6, encoding dimension 3, and compression factor 2 (taken from \textcolor {blue}{\url {https://www.jeremyjordan.me/autoencoders/}})}{figure.1}{}}
-\newlabel{eq:4}{{4}{5}{PCA vs autoencoder}{equation.2.4}{}}
-\newlabel{eq:5}{{5}{5}{PCA vs autoencoder}{equation.2.5}{}}
-\newlabel{eq:6}{{6}{5}{PCA vs autoencoder}{equation.2.6}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Nonlinear and convolutional}{5}{subsection.2.2}\protected@file@percent }
-\newlabel{sec:auto2}{{2.2}{5}{Nonlinear and convolutional}{subsection.2.2}{}}
-\@writefile{toc}{\contentsline {paragraph}{Architectures}{5}{section*.5}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Linear architecture for autoencoder 1. Input and output dimensions $96\times 96\times 3 = 27648$, compression factor 24, encoding dimension 1152.}}{6}{figure.2}\protected@file@percent }
-\newlabel{fig:auto1}{{2}{6}{Linear architecture for autoencoder 1. Input and output dimensions $96\times 96\times 3 = 27648$, compression factor 24, encoding dimension 1152}{figure.2}{}}
-\@writefile{toc}{\contentsline {paragraph}{Network parameters}{6}{section*.6}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Deep convolutional architecture for autoencoder 2. Same input, output, and encoding dimensions as autoencoder 1.}}{7}{figure.3}\protected@file@percent }
-\newlabel{fig:auto2}{{3}{7}{Deep convolutional architecture for autoencoder 2. Same input, output, and encoding dimensions as autoencoder 1}{figure.3}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Image reconstructions yielded by both autoencoders for a random selection of 5 'fresh' test images ($96\times 96\times 3$ pixels). The top row shows the original images. The middle and bottom row show the reconstructions made by the linear autoencoder and deep convolutional autoencoder, respectively.}}{8}{figure.4}\protected@file@percent }
-\newlabel{fig:auto_visual}{{4}{8}{Image reconstructions yielded by both autoencoders for a random selection of 5 'fresh' test images ($96\times 96\times 3$ pixels). The top row shows the original images. The middle and bottom row show the reconstructions made by the linear autoencoder and deep convolutional autoencoder, respectively}{figure.4}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Training history for both autoencoders. The left graph shows the evolution of the loss (mean squared error) on the training data, whereas the right graph shows the evolution of the validation loss. The vertical dotted line indicates when early stopping occurred, due to a lack of improvement in the latter value. Loss is expressed on a logarithmic scale.}}{8}{figure.5}\protected@file@percent }
-\newlabel{fig:auto_histories}{{5}{8}{Training history for both autoencoders. The left graph shows the evolution of the loss (mean squared error) on the training data, whereas the right graph shows the evolution of the validation loss. The vertical dotted line indicates when early stopping occurred, due to a lack of improvement in the latter value. Loss is expressed on a logarithmic scale}{figure.5}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Linear autoencoder architecture with input dimension 6, encoding dimension 3, and compression factor 2 (taken from \leavevmode {\color {blue}\url  {https://www.jeremyjordan.me/autoencoders/}}).}}{5}{figure.2}\protected@file@percent }
+\newlabel{fig:linear_autoencoder}{{2}{5}{Linear autoencoder architecture with input dimension 6, encoding dimension 3, and compression factor 2 (taken from \textcolor {blue}{\url {https://www.jeremyjordan.me/autoencoders/}})}{figure.2}{}}
+\newlabel{eq:4}{{4}{6}{PCA vs autoencoder}{equation.2.4}{}}
+\newlabel{eq:5}{{5}{6}{PCA vs autoencoder}{equation.2.5}{}}
+\newlabel{eq:6}{{6}{6}{PCA vs autoencoder}{equation.2.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Nonlinear and convolutional}{6}{subsection.2.2}\protected@file@percent }
+\newlabel{sec:auto2}{{2.2}{6}{Nonlinear and convolutional}{subsection.2.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Architectures}{6}{section*.5}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Linear architecture for autoencoder 1. Input and output dimensions $96\times 96\times 3 = 27648$, compression factor 24, encoding dimension 1152.}}{7}{figure.3}\protected@file@percent }
+\newlabel{fig:auto1}{{3}{7}{Linear architecture for autoencoder 1. Input and output dimensions $96\times 96\times 3 = 27648$, compression factor 24, encoding dimension 1152}{figure.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{Network parameters}{7}{section*.6}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Deep convolutional architecture for autoencoder 2. Same input, output, and encoding dimensions as autoencoder 1.}}{8}{figure.4}\protected@file@percent }
+\newlabel{fig:auto2}{{4}{8}{Deep convolutional architecture for autoencoder 2. Same input, output, and encoding dimensions as autoencoder 1}{figure.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Image reconstructions yielded by both autoencoders for a random selection of 5 'fresh' test images ($96\times 96\times 3$ pixels). The top row shows the original images. The middle and bottom row show the reconstructions made by the linear autoencoder and deep convolutional autoencoder, respectively.}}{9}{figure.5}\protected@file@percent }
+\newlabel{fig:auto_visual}{{5}{9}{Image reconstructions yielded by both autoencoders for a random selection of 5 'fresh' test images ($96\times 96\times 3$ pixels). The top row shows the original images. The middle and bottom row show the reconstructions made by the linear autoencoder and deep convolutional autoencoder, respectively}{figure.5}{}}
 \@writefile{toc}{\contentsline {paragraph}{Evaluation}{9}{section*.7}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Evaluation of models based on reconstruction loss: \textit  {mean squared error} values for training, validation and test datasets.}}{9}{table.3}\protected@file@percent }
 \newlabel{tab:auto_eval}{{3}{9}{Evaluation of models based on reconstruction loss: \textit {mean squared error} values for training, validation and test datasets}{table.3}{}}
-\@writefile{toc}{\contentsline {paragraph}{Latent space visualization}{9}{section*.8}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {3}Classification}{10}{section.3}\protected@file@percent }
-\newlabel{sec:class}{{3}{10}{Classification}{section.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Object classification network}{10}{subsection.3.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Architectures}{10}{section*.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Network parameters}{10}{section*.10}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Architecture for classification network. Input and output dimensions $64 \times 64\times 3 = 12288$, compression factor 24, encoding dimension 512.}}{11}{figure.6}\protected@file@percent }
-\newlabel{fig:class}{{6}{11}{Architecture for classification network. Input and output dimensions $64 \times 64\times 3 = 12288$, compression factor 24, encoding dimension 512}{figure.6}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Training history for all classifier models. In the top row, the left graph shows the evolution of the accuracy on the training data, whereas the right graph shows the evolution of the validation accuracy. In the bottom row, the graphs represent the evolution of the training and validation loss (binary crossentropy). The vertical dotted line indicates when early stopping occurred, due to a lack of improvement in the latter value.}}{12}{figure.7}\protected@file@percent }
-\newlabel{fig:class_histories}{{7}{12}{Training history for all classifier models. In the top row, the left graph shows the evolution of the accuracy on the training data, whereas the right graph shows the evolution of the validation accuracy. In the bottom row, the graphs represent the evolution of the training and validation loss (binary crossentropy). The vertical dotted line indicates when early stopping occurred, due to a lack of improvement in the latter value}{figure.7}{}}
-\@writefile{toc}{\contentsline {paragraph}{Evaluation}{13}{section*.11}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Reflection}{13}{subsection.3.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {4}Segmentation}{13}{section.4}\protected@file@percent }
-\newlabel{sec:segm}{{4}{13}{Segmentation}{section.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Binary segmentation network}{13}{subsection.4.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Architecture}{13}{section*.12}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Deep convolutional architecture for the segmentation network. Input dimensions are $96 \times 96 \times 3$. The model predicts a score per pixel position, ignoring color channels---hence the output dimensions are $96 \times 96 \times 1$.}}{14}{figure.8}\protected@file@percent }
-\newlabel{fig:segm_architecture}{{8}{14}{Deep convolutional architecture for the segmentation network. Input dimensions are $96 \times 96 \times 3$. The model predicts a score per pixel position, ignoring color channels---hence the output dimensions are $96 \times 96 \times 1$}{figure.8}{}}
-\@writefile{toc}{\contentsline {paragraph}{Network parameters}{15}{section*.13}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Training history for the segmentation network. The y-axis represents the loss value (mean squared error). The vertical dotted line indicates when early stopping occurred, due to a lack of improvement in the latter value. Loss is expressed on a logarithmic scale.}}{15}{figure.9}\protected@file@percent }
-\newlabel{fig:segm_history}{{9}{15}{Training history for the segmentation network. The y-axis represents the loss value (mean squared error). The vertical dotted line indicates when early stopping occurred, due to a lack of improvement in the latter value. Loss is expressed on a logarithmic scale}{figure.9}{}}
-\@writefile{toc}{\contentsline {paragraph}{Evaluation}{15}{section*.14}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Segmentation given by network for a random selection of 5 'fresh' test images ($96\times 96\times 3$ pixels). The top row shows the original images. The second row shows the binarized segmentation labels. The middle row shows the model output for the source images. The second to last row shows binarized predictions (threshold = $0.5$). The bottom row, finally, uses the binarized prediction as a mask over the source image.}}{16}{figure.10}\protected@file@percent }
-\newlabel{fig:segm_prediction}{{10}{16}{Segmentation given by network for a random selection of 5 'fresh' test images ($96\times 96\times 3$ pixels). The top row shows the original images. The second row shows the binarized segmentation labels. The middle row shows the model output for the source images. The second to last row shows binarized predictions (threshold = $0.5$). The bottom row, finally, uses the binarized prediction as a mask over the source image}{figure.10}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Evaluation of segmentation model based on reconstruction loss: \textit  {mean squared error} values for training, validation and test datasets.}}{16}{table.4}\protected@file@percent }
-\newlabel{tab:segm_eval}{{4}{16}{Evaluation of segmentation model based on reconstruction loss: \textit {mean squared error} values for training, validation and test datasets}{table.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Reflection}{17}{subsection.4.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {5}Discussion}{17}{section.5}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Training history for both autoencoders. The left graph shows the evolution of the loss (mean squared error) on the training data, whereas the right graph shows the evolution of the validation loss. The vertical dotted line indicates when early stopping occurred, due to a lack of improvement in the latter value. Loss is expressed on a logarithmic scale.}}{10}{figure.6}\protected@file@percent }
+\newlabel{fig:auto_histories}{{6}{10}{Training history for both autoencoders. The left graph shows the evolution of the loss (mean squared error) on the training data, whereas the right graph shows the evolution of the validation loss. The vertical dotted line indicates when early stopping occurred, due to a lack of improvement in the latter value. Loss is expressed on a logarithmic scale}{figure.6}{}}
+\@writefile{toc}{\contentsline {paragraph}{Latent space visualization}{10}{section*.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Classification}{11}{section.3}\protected@file@percent }
+\newlabel{sec:class}{{3}{11}{Classification}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Object classification networks}{11}{subsection.3.1}\protected@file@percent }
+\newlabel{sec:class1}{{3.1}{11}{Object classification networks}{subsection.3.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Architecture for the home-cooked classification network. Input dimensions are $96 \times 96\times 3$, and the output vector is $5\times 1$.}}{12}{figure.7}\protected@file@percent }
+\newlabel{fig:class}{{7}{12}{Architecture for the home-cooked classification network. Input dimensions are $96 \times 96\times 3$, and the output vector is $5\times 1$}{figure.7}{}}
+\@writefile{toc}{\contentsline {paragraph}{Architecture}{13}{section*.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Data augmentation}{13}{section*.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Network parameters}{13}{section*.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Evaluation}{13}{section*.12}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Training history for all classifier models. In the top row, the left graph shows the evolution of the accuracy on the training data, whereas the right graph shows the evolution of the validation accuracy. In the bottom row, the graphs represent the evolution of the training and validation loss (\textit  {binary crossentropy}). The vertical dotted line indicates when early stopping occurred, due to a lack of improvement in the latter value.}}{14}{figure.8}\protected@file@percent }
+\newlabel{fig:class_histories1}{{8}{14}{Training history for all classifier models. In the top row, the left graph shows the evolution of the accuracy on the training data, whereas the right graph shows the evolution of the validation accuracy. In the bottom row, the graphs represent the evolution of the training and validation loss (\textit {binary crossentropy}). The vertical dotted line indicates when early stopping occurred, due to a lack of improvement in the latter value}{figure.8}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Evaluation metrics applied to test image classification, for each of the five different modeling approaches.}}{15}{figure.9}\protected@file@percent }
+\newlabel{fig:class_metrics1}{{9}{15}{Evaluation metrics applied to test image classification, for each of the five different modeling approaches}{figure.9}{}}
+\@writefile{toc}{\contentsline {paragraph}{Expansion on homemade models}{16}{section*.13}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Training history for all classifier models. In the top row, the left graph shows the evolution of the accuracy on the training data, whereas the right graph shows the evolution of the validation accuracy. In the bottom row, the graphs represent the evolution of the training and validation loss (\textit  {binary crossentropy}). The vertical dotted line indicates when early stopping occurred, due to a lack of improvement in the latter value.}}{17}{figure.10}\protected@file@percent }
+\newlabel{fig:class_histories1_long}{{10}{17}{Training history for all classifier models. In the top row, the left graph shows the evolution of the accuracy on the training data, whereas the right graph shows the evolution of the validation accuracy. In the bottom row, the graphs represent the evolution of the training and validation loss (\textit {binary crossentropy}). The vertical dotted line indicates when early stopping occurred, due to a lack of improvement in the latter value}{figure.10}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Inception-based classification}{18}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Architectures}{18}{section*.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Network parameters}{18}{section*.15}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Evaluation}{18}{section*.16}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Jointly-trained classification network}{18}{subsection.3.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Architecture for the Inception-based classification network. Input dimensions are $96\times 96\times 3$, and the output vector is $5\times 1$. }}{19}{figure.11}\protected@file@percent }
+\newlabel{fig:class_inc}{{11}{19}{Architecture for the Inception-based classification network. Input dimensions are $96\times 96\times 3$, and the output vector is $5\times 1$}{figure.11}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Training history for the Inception-based classification model (\leavevmode {\color {red}red}). The previous models are shown as a reference. The vertical dotted line indicates when early stopping occurred.}}{20}{figure.12}\protected@file@percent }
+\newlabel{fig:class_histories2}{{12}{20}{Training history for the Inception-based classification model (\textcolor {red}{red}). The previous models are shown as a reference. The vertical dotted line indicates when early stopping occurred}{figure.12}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces Evaluation metrics for Inception-based classification network. Previous approaches are shown as a reference.}}{21}{figure.13}\protected@file@percent }
+\newlabel{fig:class_metrics2}{{13}{21}{Evaluation metrics for Inception-based classification network. Previous approaches are shown as a reference}{figure.13}{}}
+\@writefile{toc}{\contentsline {paragraph}{Architectures}{21}{section*.17}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Network parameters}{21}{section*.18}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Evaluation}{21}{section*.19}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Architecture for the jointly-trained network. Input dimensions are $96\times 96\times 3$, and the output consists of both a $96\times 96\times 3$ image reconstruction matrix, and a $5\times 1$ classification vector. }}{22}{figure.14}\protected@file@percent }
+\newlabel{fig:class_joint}{{14}{22}{Architecture for the jointly-trained network. Input dimensions are $96\times 96\times 3$, and the output consists of both a $96\times 96\times 3$ image reconstruction matrix, and a $5\times 1$ classification vector}{figure.14}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces Training history for the Inception-based classification model (\leavevmode {\color {red}red}). The previous models are shown as a reference. The vertical dotted line indicates when early stopping occurred.}}{23}{figure.15}\protected@file@percent }
+\newlabel{fig:class_histories2}{{15}{23}{Training history for the Inception-based classification model (\textcolor {red}{red}). The previous models are shown as a reference. The vertical dotted line indicates when early stopping occurred}{figure.15}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces Evaluation metrics for Inception-based classification network. Previous approaches are shown as a reference.}}{24}{figure.16}\protected@file@percent }
+\newlabel{fig:class_metrics2}{{16}{24}{Evaluation metrics for Inception-based classification network. Previous approaches are shown as a reference}{figure.16}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Reflection}{24}{subsection.3.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {17}{\ignorespaces Classification scores for each of the class labels, generated by each model for a set of test images. Values over 0.5 (dotted line) would be considered a 'detection'.}}{25}{figure.17}\protected@file@percent }
+\newlabel{fig:class_prediction}{{17}{25}{Classification scores for each of the class labels, generated by each model for a set of test images. Values over 0.5 (dotted line) would be considered a 'detection'}{figure.17}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Segmentation}{26}{section.4}\protected@file@percent }
+\newlabel{sec:segm}{{4}{26}{Segmentation}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Binary segmentation network}{26}{subsection.4.1}\protected@file@percent }
+\newlabel{sec:segm_1}{{4.1}{26}{Binary segmentation network}{subsection.4.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{Architecture}{26}{section*.20}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Network parameters}{26}{section*.21}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Evaluation}{26}{section*.22}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {18}{\ignorespaces Deep convolutional architecture for the segmentation network. Input dimensions are $96 \times 96 \times 3$. The model predicts a score per pixel position, ignoring color channels---hence the output dimensions are $96 \times 96 \times 1$.}}{27}{figure.18}\protected@file@percent }
+\newlabel{fig:segm_architecture}{{18}{27}{Deep convolutional architecture for the segmentation network. Input dimensions are $96 \times 96 \times 3$. The model predicts a score per pixel position, ignoring color channels---hence the output dimensions are $96 \times 96 \times 1$}{figure.18}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {19}{\ignorespaces Training history for the segmentation network. The y-axis represents the loss value (mean squared error). Both training and validation loss are plotted. The vertical dotted line indicates when early stopping occurred, due to a lack of improvement in the validation losse. Loss is expressed on a logarithmic scale.}}{28}{figure.19}\protected@file@percent }
+\newlabel{fig:segm_history}{{19}{28}{Training history for the segmentation network. The y-axis represents the loss value (mean squared error). Both training and validation loss are plotted. The vertical dotted line indicates when early stopping occurred, due to a lack of improvement in the validation losse. Loss is expressed on a logarithmic scale}{figure.19}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {20}{\ignorespaces Segmentation given by network for a random selection of 5 'fresh' test images ($96\times 96\times 3$ pixels). The top row shows the original images. The second row shows the binarized segmentation labels. The middle row shows the model output for the source images. The second to last row shows binarized predictions (threshold = $0.5$). The bottom row, finally, uses the binarized prediction as a mask over the source image.}}{29}{figure.20}\protected@file@percent }
+\newlabel{fig:segm_prediction}{{20}{29}{Segmentation given by network for a random selection of 5 'fresh' test images ($96\times 96\times 3$ pixels). The top row shows the original images. The second row shows the binarized segmentation labels. The middle row shows the model output for the source images. The second to last row shows binarized predictions (threshold = $0.5$). The bottom row, finally, uses the binarized prediction as a mask over the source image}{figure.20}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Evaluation of segmentation models using \textit  {mean squared error (MSE)} and \textit  {dice loss} values for training, validation and test datasets.}}{30}{table.4}\protected@file@percent }
+\newlabel{tab:segm_eval}{{4}{30}{Evaluation of segmentation models using \textit {mean squared error (MSE)} and \textit {dice loss} values for training, validation and test datasets}{table.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}U-Net-based segmentation network}{30}{subsection.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Architecture}{30}{section*.23}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Network parameters}{30}{section*.24}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Evaluation}{30}{section*.25}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Reflection}{30}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Possible enhancement strategies}{30}{section*.26}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {21}{\ignorespaces U-Net-based architecture for the second segmentation network. Input dimensions are $96 \times 96 \times 3$. Output dimensions are $96 \times 96 \times 1$.}}{31}{figure.21}\protected@file@percent }
+\newlabel{fig:segm_unet_architecture}{{21}{31}{U-Net-based architecture for the second segmentation network. Input dimensions are $96 \times 96 \times 3$. Output dimensions are $96 \times 96 \times 1$}{figure.21}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {22}{\ignorespaces Segmentation given by U-Net-based mdoel for a random selection of 5 'fresh' test images ($96\times 96\times 3$ pixels). The top row shows the original images. The second row shows the binarized segmentation labels. The middle row shows the model output for the source images. The second to last row shows binarized predictions (threshold = $0.5$). The bottom row, finally, uses the binarized prediction as a mask over the source image.}}{32}{figure.22}\protected@file@percent }
+\newlabel{fig:segm_unet_prediction}{{22}{32}{Segmentation given by U-Net-based mdoel for a random selection of 5 'fresh' test images ($96\times 96\times 3$ pixels). The top row shows the original images. The second row shows the binarized segmentation labels. The middle row shows the model output for the source images. The second to last row shows binarized predictions (threshold = $0.5$). The bottom row, finally, uses the binarized prediction as a mask over the source image}{figure.22}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {23}{\ignorespaces This picture shows three purposely selected training images, along with their target, predicted, and thresholded segmentations, to illustrate apparent model strategizing attempts.}}{33}{figure.23}\protected@file@percent }
+\newlabel{fig:segm_observation}{{23}{33}{This picture shows three purposely selected training images, along with their target, predicted, and thresholded segmentations, to illustrate apparent model strategizing attempts}{figure.23}{}}
+\@writefile{toc}{\contentsline {paragraph}{Observation}{34}{section*.27}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Discussion}{34}{section.5}\protected@file@percent }

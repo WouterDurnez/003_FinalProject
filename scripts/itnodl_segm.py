@@ -205,7 +205,7 @@ def build_segm_net(model_name: str, train: bool,
     # ... otherwise, create it
     except Exception as e:
 
-        log(e)
+        # log(e)
 
         log("Building segmentation network.")
         segnet = convolutional_segm_architecture(image_dim=image_dim, optimizer=optimizer, loss=loss,
@@ -380,7 +380,7 @@ def plot_model_history(history: History, image_dim: int, model_type="segmentatio
     # Set a title, the correct y-label, and the y-limit
     ax.set_ylabel(y_label, fontdict={'fontname': 'Times New Roman'})
     ax.set_ylim(0.1, 1.2)
-    # ax.set_yscale("log")
+    ax.set_yscale("log")
 
     ax.set_xlabel('Epoch', fontdict={'fontname': 'Times New Roman'})
     ax.set_xlim(0, 500)
@@ -458,7 +458,7 @@ def plot_model_histories(histories: dict, image_dim: int, compression_factor: in
 
             color_counter += 1
 
-            # ax.set_yscale("log")
+            ax.set_yscale("log")
 
             if col == 0:
                 ax.legend(loc='best', prop={'family': 'serif'})
@@ -518,6 +518,7 @@ if __name__ == "__main__":
     x_va, y_va = data['x_val'], data['y_val']
 
     # Train segmentation network
+    log("Home-made segmentation network", title=True)
     segnet, history = build_segm_net('conv_segm', train=train, x_tr=x_tr, y_tr=y_tr, x_va=x_va, y_va=y_va,
                                      compression_factor=compression_factor, epochs=epochs,
                                      optimizer='adam', loss=loss, patience=patience, mono=True, auto=False)
@@ -529,6 +530,7 @@ if __name__ == "__main__":
     y_va_pred = segnet.predict(x=x_va)
 
     # Visualize results
+    log("Visualizing results.", lvl=1)
     y_te_res = x_te.copy()
     for color_channel in range(3):
         y_te_res[:, :, :, color_channel] = np.multiply(x_te[:, :, :, color_channel],
@@ -552,16 +554,19 @@ if __name__ == "__main__":
     plot_model_history(history=history, image_dim=image_dim, save=True, plot=True, model_type="Segmentation")
 
     # Evaluation
+    log("Evaluating model.", lvl=1)
     segnet_eval = []
     segnet_dice = []
 
     for x, y in zip([x_tr, x_va, x_te], [y_tr, y_va, y_te]):
         segnet_eval.append(segnet.evaluate(x, y))
-        segnet_dice.append(dice_coef(y, segnet.predict(x)))
+        segnet_dice.append(1 - dice_coef(y, segnet.predict(x)))
 
-    print(segnet_eval)
+    # print(segnet_eval)
+    #print(segnet_dice)
 
     # Compare with U-Net
+    log("U-net-based segmentation network", title=True)
     unet_model, unet_history = unet.build_unet_segmentation_network(model_name='conv_segm_unet', x_tr=x_tr, y_tr=y_tr,
                                                                     x_va=x_va,
                                                                     y_va=y_va,
@@ -577,3 +582,5 @@ if __name__ == "__main__":
 
     plot_model_histories(histories=histories, image_dim=96, compression_factor=24,
                          loss='mean squared error', save=True, plot=True)
+
+    #print(

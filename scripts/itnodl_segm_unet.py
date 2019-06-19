@@ -193,7 +193,7 @@ if __name__ == "__main__":
     image_dim = 96
     compression_factor = 24
     epochs = 500
-    patience = 50
+    patience = 0
     loss = 'mean_squared_error'
 
     # Set remaining parameters

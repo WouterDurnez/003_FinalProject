@@ -142,7 +142,7 @@ if __name__ == "__main__":
     image_dim = 96
     compression_factor = 24
     epochs = 300
-    patience = 20
+    patience = 50
     batch_size = 128
 
     # Get the data

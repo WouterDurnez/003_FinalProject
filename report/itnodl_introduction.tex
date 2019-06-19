@@ -1,4 +1,9 @@
 
+%%%%%%%%%%%%%%%%
+% Introduction %
+%%%%%%%%%%%%%%%%
+
+
 \section{Introduction}
 \label{sec:intro}
 
@@ -8,7 +13,7 @@ This report is submitted as part of the examination for the course \textit{Compu
 
 The project code can be found here: \textcolor{blue}{\url{https://github.com/WouterDurnez/003_FinalProject}}. Its structure is shown in figure \ref{fig:project_structure}.
 
-\begin{figure}[!h]
+\begin{figure}[!htbp]
 \begin{center}
 \begin{minipage}{4cm}
 \dirtree{%
@@ -29,18 +34,24 @@ The project code can be found here: \textcolor{blue}{\url{https://github.com/Wou
 			.3 plots.
 			.3 history.
 	.1 report.
+		.2 \textit{itnodl\_report\_WouterDurnez.tex}.
+		.2 \textit{itnodl\_introduction.tex}.
+		.2 \textit{itnodl\_autoencoders.tex}.
+		.2 \textit{itnodl\_classification.tex}.
+		.2 \textit{itnodl\_segmentation.tex}.
+		.2 \textit{itnodl\_discussion.tex}.
 		.2 images.
 	.1 scripts.
-		.2 {\_\_init\_\_.py}.
-		.2 {itnodl\_help.py}.
-		.2 {itnodl\_data.py}.
-		.2 {itnodl\_auto.py}.
-		.2 {itnodl\_class.py}.
-		.2 {itnodl\_class\_inc.py}.
-		.2 {itnodl\_class\_joint.py}.
-		.2 {itnodl\_segm.py}.
-		.2 {itnodl\_segm\_unet.py}.
-		.2 {itnodl\_tsne.py}.	
+		.2 \textit{\_\_init\_\_.py}.
+		.2 \textit{itnodl\_help.py}.
+		.2 \textit{itnodl\_data.py}.
+		.2 \textit{itnodl\_auto.py}.
+		.2 \textit{itnodl\_class.py}.
+		.2 \textit{itnodl\_class\_inc.py}.
+		.2 \textit{itnodl\_class\_joint.py}.
+		.2 \textit{itnodl\_segm.py}.
+		.2 \textit{itnodl\_segm\_unet.py}.
+		.2 \textit{itnodl\_tsne.py}.	
 }
 \end{minipage}
 \end{center}\caption{Project code structure.}
@@ -52,9 +63,9 @@ The code expects the \textit{data}, \textit{models} and \textit{scripts} folders
 \paragraph{Datasets} The datasets used in this project were extracted from the PASCAL VOC 2009 challenge dataset. To minimize the training load, a subset of the full dataset was taken for each task. Filtering was achieved using the following class list: ['aeroplane', 'car', 'chair', 'dog', 'bird']. Only images that were labeled as belonging to one (or more) of the filter classes were withheld. The datasets are described in Table \ref{tab:datasets} and \ref{tab:classcounts}. All data-related functions are bundled in \texttt{scripts/itnodl\_data.py}.
 
 
-The organisation of the dataset in training and validation images was respected. Since it is possible to impart a bias onto a model by having its training process guided too strongly by a validation set, it was import to retain a set of 'fresh' images to use in a final check of each model's quality metrics. Therefore, half of the original 'validation images' were randomly sampled to be test images (denoted in table \ref{tab:datasets} as $val^\ast$), whereas the remaining images in the validation set were kept as validation data (denoted in the table by $val$). The latter category of images was used to monitor model metrics during training. Test images, on the other hand, were never seen or used during model training. Importantly, a seed was set for the random sampling to always yield the same results.
+The organisation of the dataset in training and validation images was respected. Since it is possible to impart a bias onto a model by having its training process guided too strongly by a validation set, it was important to retain a set of 'fresh' images to use in a final check of each model's quality metrics. Therefore, half of the original 'validation images' were randomly sampled to be test images (denoted in table \ref{tab:datasets} as $val^\ast$), whereas the remaining images in the validation set were kept as validation data (denoted in the table by $val$). The latter category of images was used to monitor model metrics during training. Test images, on the other hand, were never seen or used during model training. Importantly, a seed was set for the random sampling to always yield the same results.
  
-The dataset for the final task---\textbf{segmentation}---is slightly different from the others. Again, the same five classes were used to filter the full dataset to a smaller one. This time, however, only those images that were accompanied by a segmented counterpart could be used. This significantly reduced the number of available images in each of the (sub)sets. I attempted to remedy this problem in part by using data augmentation.
+The dataset for the final task---\textbf{segmentation}---is slightly different from the others. Again, the same five classes were used to filter the full dataset to a smaller one. This time, however, only those images that were accompanied by a segmented counterpart could be used. This significantly reduced the number of available images in each of the (sub)sets (see table \ref{tab:classcounts}). I attempted to remedy this problem in part by using data augmentation.
 
 
 \begingroup
@@ -70,10 +81,10 @@ The dataset for the final task---\textbf{segmentation}---is slightly different f
 		\multirow{2}{*}{\textit{\textbf{Training}}}   & Files & $train$    & $train$    & $train$    \\
 		                                              & N     & 1489       & 1489       & 286        \\ 
 		\midrule
-		\multirow{2}{*}{\textit{\textbf{Validation}}} & Files & $val^\ast$ & $val^\ast$ & $val^\ast$ \\
+		\multirow{2}{*}{\textit{\textbf{Validation}}} & Files & $val$ & $val$ & $val$ \\
 		                                              & N     & 735        & 735        & 67         \\ 
 		\midrule
-		\multirow{2}{*}{\textit{\textbf{Test}}}       & Files & $val$      & $val$      & $val$      \\
+		\multirow{2}{*}{\textit{\textbf{Test}}}       & Files & $val^\ast$      & $val^\ast$      & $val^\ast$      \\
 		                                              & N     & 735        & 735        & 67         \\ 
 		\bottomrule
 	\end{tabular}
@@ -100,6 +111,6 @@ The dataset for the final task---\textbf{segmentation}---is slightly different f
 \end{table}
 \endgroup
 
-\paragraph{General parameters} Most of the neural networks (and their architectures) described in this report are largely derived from the deep convolutional autoencoder (DCA) described in section \textcolor{blue}{\ref{sec:auto}}. I experimented a lot with different network and training parameters to observe the impact on the result, its accuracy, and the speed with which it was obtained. To save time, I heavily downsampled the original images to feed to the neural nets (down to $16 \times 16 \times 3$ pixels). Once the algorithms yielded output as expected, I experimented with higher resolution images (up to $128 \times 128 \times 3$ pixels). However, for the sake of consistency, \emph{all models discussed in this report take input images with dimensionality $96 \times 96 \times 3$, except when explicitly mentioned otherwise}. Finally, all model training used so-called \textit{model checkpoints}, where the best model---i.e. the model yielding the least amount of validation loss--was saved intermediately when possible.
+\paragraph{General parameters} Most of the neural networks (and their architectures) described in this report are largely derived from the deep convolutional autoencoder (DCA) detailed in section \textcolor{blue}{\ref{sec:auto}}. A lot of experimentation was done with respect to different network and training parameters to observe the impact on the result, its accuracy, and the speed with which it was obtained. To save time, I first downsampled the original images to feed to the neural nets (down to $16 \times 16 \times 3$ pixels). Once the algorithms yielded output as expected, I experimented with higher resolution images (up to $128 \times 128 \times 3$ pixels). However, for the sake of consistency (and because some models took an exceedingly long time to train using images of these dimensions), \emph{all models discussed in this report expect input images with dimensionality $96 \times 96 \times 3$.}. Finally, all model training used so-called \textit{model checkpoints}, where the best model---i.e. the model yielding the least amount of validation loss--was saved intermediately when possible.
 
-\paragraph{Platform} All models were created using Keras, a deep learning library developed for the Python programming language. For model training, I restricted myself to the loss functions and optimizers that are implemented in this package.
+\paragraph{Platform} All models were created using Keras, a deep learning library developed for the Python programming language. It uses the Tensorflow library as backend. In model training, I restricted myself to the loss functions and optimizers that are implemented in this package.
